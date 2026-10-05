@@ -1,0 +1,101 @@
+SKY EXPLORER 4.0 — VERIFICACIÓN DE LA ENTREGA
+
+QUÉ SIGNIFICA “COMPROBADO” EN ESTA ENTREGA
+Se ejecutaron pruebas de lógica con DOM simulado y validación gráfica nativa.
+No se dispuso de Safari de un iPhone físico para revisar píxeles, gestos reales,
+audio, instalación del icono o FPS. Esas comprobaciones se distinguen abajo.
+No se presenta una simulación de navegador como una prueba en el teléfono.
+
+FUENTE Y PAQUETE
+• Árbol de main: bae6a25951db574892fa63075a35cd7eec95e2b4.
+• Se conservan los 38 nombres de archivo del original y sus sistemas.
+• Las cuatro imágenes y el catálogo estelar conservan los bytes originales.
+• Los módulos de juego, excepto las adaptaciones gráficas/CPU documentadas,
+  conservan su lógica. Todos los imports ahora apuntan a módulos locales r186.
+• Sin dependencias de CDN ni herramientas de compilación para abrir la web.
+• Sintaxis JS, cierre de imports/rutas locales y estructura del ZIP comprobados.
+• El ZIP de respaldo contiene los 38 archivos exactos de la fuente auditada,
+  contrastados con sus hashes Git. No contiene una copia de tus partidas:
+  las partidas están en tu navegador y se exportan mediante el cuaderno.
+
+WEBGPU
+VALIDADO con Three 0.186.1 y Dawn nativo, backend null:
+• Inicialización asíncrona real de WebGPURenderer.
+• Compilación de los 17 pares de shaders migrados a TSL/WGSL.
+• Envío de comandos de las escenas de Tierra y Luna.
+• Materiales de props/fantasma y textura BVH al reconstruir la base.
+• Pasada de iluminación lunar en RenderTarget.
+• Materiales básicos del gizmo/contornos y limpieza de profundidad del overlay.
+• Rechazo explícito de un shader que no estuviera migrado.
+• Notificación de pérdida simulada del dispositivo.
+• Detección automática de ausencia de WebGPU y ruta de recuperación WebGL.
+
+El backend null valida shaders/pipelines/API, NO genera una comparación de
+imágenes y NO mide tiempo de GPU. Algunas imágenes se reemplazan por texturas
+mínimas SOLO en ese test; el paquete publicado conserva las originales.
+La fábrica de fallback se comprobó con un renderer WebGL de prueba; no se
+confunde ese test de selección con una ejecución visual de WebGL en Safari.
+Los GLSL originales se conservaron; su compilación había sido comprobada
+con EGL. La ruta de recuperación utiliza la escena completa, no una demo.
+
+TIERRA Y LUNA: LÓGICA DE LA APP REAL
+VALIDADO en DOM simulado con resolución horizontal 844 × 390:
+• Inicialización, entrada y cambio entre ambos destinos.
+• Uniforms numéricos finitos en el ciclo de actualización.
+• Gravedad de cada entorno: Tierra 9,80665 y Luna 1,62 m/s².
+• Inventario 30 + 10 y acceso al catálogo.
+• Colocación modular de pisos, paredes y techos, plano superior de techo.
+• Cimientos vecinos, rotados y tamaños combinados; soporte de muebles.
+• Rampa adaptativa de acceso al cimiento y pendiente transitable.
+• Telescopio anclado al cimiento al mirar repetidamente arriba/abajo.
+• Anillos y deslizadores de rotación, edición independiente y borrado.
+• Deshacer/rehacer, persistencia y restauración de ángulos libres.
+• Cancelación del fantasma con toque, distinción frente a gesto de mirada.
+• Scroll táctil del catálogo, pulsación larga y arrastre.
+• Transferencia de stacks, atajos, selección, lanzamiento y menú contextual.
+• Identificación de Luna y siete planetas; guía e interruptor de lámpara.
+• Láser desde el borde en distintos FOV/aspectos y estructura de controles
+  del telescopio. El layout real de Safari no se deduce del DOM simulado.
+
+CONSERVADO Y REQUIERE REVISIÓN EN EL DISPOSITIVO
+Joystick/multitouch simultáneo, sonidos, brillo/color exacto del cielo,
+Sol/Luna/estrellas/Vía Láctea, detalle de césped y relieve, sombras visibles,
+faros, conducción/salto/boost, filtros y composición final de las interfaces.
+Sus módulos y ecuaciones se conservan y las rutas gráficas se compilan,
+pero eso no sustituye una revisión visual e interactiva en el iPhone.
+Resize y orientación conservan los handlers originales y la proyección se
+adapta al sistema de coordenadas WebGPU. Safe areas siguen siendo CSS.
+No hay medición física de temperatura, energía ni memoria máxima en Safari.
+
+GUARDADOS
+VALIDADO con la implementación anterior 3.2 escribiendo datos reales y la
+nueva leyéndolos, guardándolos y abriéndolos otra vez:
+• Ambos mundos, cimientos, mesas, lámparas, telescopio y rotaciones libres.
+• Objetos lanzados, cantidades y posiciones.
+• Las 40 casillas y selección actual de acceso rápido.
+• Cuaderno, foto de prueba y desbloqueos derivados de observaciones.
+• Igualdad de los datos serializados; mismas claves y formato.
+El exportador/importador original de expediciones no se reemplazó.
+
+PWA
+VALIDADO ejecutando el Service Worker real en un entorno de prueba de
+Cache Storage, red y clientes, con los archivos finales de producción:
+• Instalación completa con SHA-256 de cada recurso y ruta /Sky-Explorer/.
+• HTML, módulos, motor y recursos de ambos mundos disponibles sin red.
+• Inicio con ?inicio=pwa y diagnóstico con ?diagnostico=1.
+• Despliegue corrupto/parcial rechazado; la versión anterior sigue disponible.
+• Nueva versión esperando aceptación sin interrumpir la partida.
+• Dos ventanas usando versiones diferentes sin mezclar sus módulos.
+• Limpieza de cachés antiguas solo dentro del ámbito de esta aplicación.
+• Ningún borrado de localStorage, IndexedDB ni cachés de otras aplicaciones.
+
+PENDIENTE DE VERIFICACIÓN REAL EN IPHONE
+Añadir a pantalla de inicio, comprobar standalone y WebGPU en diagnóstico,
+completar la descarga dentro de la app instalada, cerrar y abrir en modo avión,
+y comparar la misma escena en calidad Auto. PASOS-PARA-ISAI.txt explica cómo.
+La actualización del Service Worker también debe observarse en Safari al
+publicar otra entrega completa. Sus transiciones ya están probadas en lógica.
+
+La entrega es el proyecto completo modificado. Esta relación permite separar
+lo demostrado por pruebas de lo que necesita observación en el equipo final;
+no promete 60 FPS ni equivalencia visual certificada sin esa observación.

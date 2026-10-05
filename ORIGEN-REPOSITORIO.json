@@ -1,0 +1,311 @@
+{
+  "sha": "bae6a25951db574892fa63075a35cd7eec95e2b4",
+  "url": "https://api.github.com/repos/IzayTO/Sky-Explorer/git/trees/bae6a25951db574892fa63075a35cd7eec95e2b4",
+  "tree": [
+    {
+      "path": "CREDITOS.txt",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "451cf1dfbd9714c2965b804090c736415c89c3f3",
+      "size": 5161,
+      "url": "https://api.github.com/repos/IzayTO/Sky-Explorer/git/blobs/451cf1dfbd9714c2965b804090c736415c89c3f3"
+    },
+    {
+      "path": "LEEME.txt",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "057cb5415bc178d140dde5379d9a16da09ab2b24",
+      "size": 16120,
+      "url": "https://api.github.com/repos/IzayTO/Sky-Explorer/git/blobs/057cb5415bc178d140dde5379d9a16da09ab2b24"
+    },
+    {
+      "path": "STARS-LICENSE.txt",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "bbf36e8a879754d582f40b9841123b8381cf5e93",
+      "size": 1480,
+      "url": "https://api.github.com/repos/IzayTO/Sky-Explorer/git/blobs/bbf36e8a879754d582f40b9841123b8381cf5e93"
+    },
+    {
+      "path": "THREE-LICENSE.txt",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "d07e209686512b9ac93d7df5481a4a6f622093e7",
+      "size": 1081,
+      "url": "https://api.github.com/repos/IzayTO/Sky-Explorer/git/blobs/d07e209686512b9ac93d7df5481a4a6f622093e7"
+    },
+    {
+      "path": "app.js",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "ebded0b47875f1413bfb131816b856270a3669f5",
+      "size": 39316,
+      "url": "https://api.github.com/repos/IzayTO/Sky-Explorer/git/blobs/ebded0b47875f1413bfb131816b856270a3669f5"
+    },
+    {
+      "path": "build-gizmo.js",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "79dbef61243dce2af50dc28017c515fb31d8eb8f",
+      "size": 4817,
+      "url": "https://api.github.com/repos/IzayTO/Sky-Explorer/git/blobs/79dbef61243dce2af50dc28017c515fb31d8eb8f"
+    },
+    {
+      "path": "build-placement.js",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "2fca19448005ea8285cc2dbc9609c48ce4012252",
+      "size": 11541,
+      "url": "https://api.github.com/repos/IzayTO/Sky-Explorer/git/blobs/2fca19448005ea8285cc2dbc9609c48ce4012252"
+    },
+    {
+      "path": "build-world.js",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "b488dc6b47a2bc04e191d963ee52ae7c01df049f",
+      "size": 18810,
+      "url": "https://api.github.com/repos/IzayTO/Sky-Explorer/git/blobs/b488dc6b47a2bc04e191d963ee52ae7c01df049f"
+    },
+    {
+      "path": "celestial.js",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "52b7377ceb98132596c3210c348b924a346c54f0",
+      "size": 12013,
+      "url": "https://api.github.com/repos/IzayTO/Sky-Explorer/git/blobs/52b7377ceb98132596c3210c348b924a346c54f0"
+    },
+    {
+      "path": "controls.js",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "7422ef368b0f90746d6b498d3f82c834f94a7e2b",
+      "size": 11243,
+      "url": "https://api.github.com/repos/IzayTO/Sky-Explorer/git/blobs/7422ef368b0f90746d6b498d3f82c834f94a7e2b"
+    },
+    {
+      "path": "earth.jpg",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "9054d1f4b7ddc3b046cb89c7770f880e4785fc7f",
+      "size": 1006115,
+      "url": "https://api.github.com/repos/IzayTO/Sky-Explorer/git/blobs/9054d1f4b7ddc3b046cb89c7770f880e4785fc7f"
+    },
+    {
+      "path": "expedition.js",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "25e398e83a2ca983fb4cd6da1a4a1c89ace0dfda",
+      "size": 38630,
+      "url": "https://api.github.com/repos/IzayTO/Sky-Explorer/git/blobs/25e398e83a2ca983fb4cd6da1a4a1c89ace0dfda"
+    },
+    {
+      "path": "field-effects.js",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "89eca78ce9973189eb5da57873094c2cefbb98c2",
+      "size": 6926,
+      "url": "https://api.github.com/repos/IzayTO/Sky-Explorer/git/blobs/89eca78ce9973189eb5da57873094c2cefbb98c2"
+    },
+    {
+      "path": "field-guide.js",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "986e4156d42fdaf5cf35f89d5ef704a8e1d82e66",
+      "size": 10261,
+      "url": "https://api.github.com/repos/IzayTO/Sky-Explorer/git/blobs/986e4156d42fdaf5cf35f89d5ef704a8e1d82e66"
+    },
+    {
+      "path": "flashlight.js",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "0c7c83c1559245bb26d32cffd6698001fa0d3505",
+      "size": 4634,
+      "url": "https://api.github.com/repos/IzayTO/Sky-Explorer/git/blobs/0c7c83c1559245bb26d32cffd6698001fa0d3505"
+    },
+    {
+      "path": "index.html",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "242af1471391263e974e6cb6fea7541fa0e191d5",
+      "size": 13697,
+      "url": "https://api.github.com/repos/IzayTO/Sky-Explorer/git/blobs/242af1471391263e974e6cb6fea7541fa0e191d5"
+    },
+    {
+      "path": "inventory.js",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "27ccfe3fa297cd432a97084e9ec29cd5376c3465",
+      "size": 15403,
+      "url": "https://api.github.com/repos/IzayTO/Sky-Explorer/git/blobs/27ccfe3fa297cd432a97084e9ec29cd5376c3465"
+    },
+    {
+      "path": "items.js",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "fb4fdfc33ec3b1d9ee582d178232c2423e9f82e0",
+      "size": 5669,
+      "url": "https://api.github.com/repos/IzayTO/Sky-Explorer/git/blobs/fb4fdfc33ec3b1d9ee582d178232c2423e9f82e0"
+    },
+    {
+      "path": "lunar-height.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "8aa81ae6ef187a4937138a52458ad73ce49a27c2",
+      "size": 1403337,
+      "url": "https://api.github.com/repos/IzayTO/Sky-Explorer/git/blobs/8aa81ae6ef187a4937138a52458ad73ce49a27c2"
+    },
+    {
+      "path": "lunar-light-cache.js",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "a8430b6adca4969f37b7fcbf44ae55a7d4918af1",
+      "size": 4033,
+      "url": "https://api.github.com/repos/IzayTO/Sky-Explorer/git/blobs/a8430b6adca4969f37b7fcbf44ae55a7d4918af1"
+    },
+    {
+      "path": "lunar-sky.js",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "f84aa8ea39d3ff439613de1f7519947f50e38c2d",
+      "size": 10051,
+      "url": "https://api.github.com/repos/IzayTO/Sky-Explorer/git/blobs/f84aa8ea39d3ff439613de1f7519947f50e38c2d"
+    },
+    {
+      "path": "lunar-sound.js",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "c9cad7627df1c3f531646cabde9c08aa3abbb636",
+      "size": 2206,
+      "url": "https://api.github.com/repos/IzayTO/Sky-Explorer/git/blobs/c9cad7627df1c3f531646cabde9c08aa3abbb636"
+    },
+    {
+      "path": "lunar-terrain.js",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "1bd14330f3e2eb499276a02c70258b55ef639438",
+      "size": 8822,
+      "url": "https://api.github.com/repos/IzayTO/Sky-Explorer/git/blobs/1bd14330f3e2eb499276a02c70258b55ef639438"
+    },
+    {
+      "path": "moon.jpg",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "ed05d2cbce6b1258bc06d0f74ed8bb05851a6a55",
+      "size": 457942,
+      "url": "https://api.github.com/repos/IzayTO/Sky-Explorer/git/blobs/ed05d2cbce6b1258bc06d0f74ed8bb05851a6a55"
+    },
+    {
+      "path": "props.js",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "9d0f0e18b859508e0f28dbe9e278ee2d2b352144",
+      "size": 15898,
+      "url": "https://api.github.com/repos/IzayTO/Sky-Explorer/git/blobs/9d0f0e18b859508e0f28dbe9e278ee2d2b352144"
+    },
+    {
+      "path": "regolith.jpg",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "dbe2e0a4c1b22f7ed7e4217bbf0d0cd9029b7d4a",
+      "size": 509041,
+      "url": "https://api.github.com/repos/IzayTO/Sky-Explorer/git/blobs/dbe2e0a4c1b22f7ed7e4217bbf0d0cd9029b7d4a"
+    },
+    {
+      "path": "science.js",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "3eb5f62ec0e0933986f303e93bb5bcb9f36a6f07",
+      "size": 16497,
+      "url": "https://api.github.com/repos/IzayTO/Sky-Explorer/git/blobs/3eb5f62ec0e0933986f303e93bb5bcb9f36a6f07"
+    },
+    {
+      "path": "sky.js",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "d248b92e06661668c47f0c98c74f4fe085a93402",
+      "size": 15630,
+      "url": "https://api.github.com/repos/IzayTO/Sky-Explorer/git/blobs/d248b92e06661668c47f0c98c74f4fe085a93402"
+    },
+    {
+      "path": "sound.js",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "92e5548e6dcc76d33c959ee2b4f545cc712ee6c9",
+      "size": 7801,
+      "url": "https://api.github.com/repos/IzayTO/Sky-Explorer/git/blobs/92e5548e6dcc76d33c959ee2b4f545cc712ee6c9"
+    },
+    {
+      "path": "spatial.js",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "24da72d41d1ede052afa167b0daead023e17a579",
+      "size": 2020,
+      "url": "https://api.github.com/repos/IzayTO/Sky-Explorer/git/blobs/24da72d41d1ede052afa167b0daead023e17a579"
+    },
+    {
+      "path": "star-catalog.js",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "e88014ed8f948420c0d5d1137e600400f69d7922",
+      "size": 1113345,
+      "url": "https://api.github.com/repos/IzayTO/Sky-Explorer/git/blobs/e88014ed8f948420c0d5d1137e600400f69d7922"
+    },
+    {
+      "path": "styles.css",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "7753074b74d62b42ed9ae7ff093eb6992976cf5e",
+      "size": 68249,
+      "url": "https://api.github.com/repos/IzayTO/Sky-Explorer/git/blobs/7753074b74d62b42ed9ae7ff093eb6992976cf5e"
+    },
+    {
+      "path": "terrain.js",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "fbe02de5c84ee015856b221adf5e2632b408bb0e",
+      "size": 11600,
+      "url": "https://api.github.com/repos/IzayTO/Sky-Explorer/git/blobs/fbe02de5c84ee015856b221adf5e2632b408bb0e"
+    },
+    {
+      "path": "three.module.js",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "0bcc7a286da2c115853ceec9deea19923e10ddc1",
+      "size": 1272972,
+      "url": "https://api.github.com/repos/IzayTO/Sky-Explorer/git/blobs/0bcc7a286da2c115853ceec9deea19923e10ddc1"
+    },
+    {
+      "path": "vehicle-models.js",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "8e7429fda77a24cf42254cd4d978c58003ad7abe",
+      "size": 15672,
+      "url": "https://api.github.com/repos/IzayTO/Sky-Explorer/git/blobs/8e7429fda77a24cf42254cd4d978c58003ad7abe"
+    },
+    {
+      "path": "vehicle-sound.js",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "68965da28af4a41d6b68c68a9b22d1d96af01b34",
+      "size": 4508,
+      "url": "https://api.github.com/repos/IzayTO/Sky-Explorer/git/blobs/68965da28af4a41d6b68c68a9b22d1d96af01b34"
+    },
+    {
+      "path": "vehicles.js",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "705b62c9c1bdd77c890ae835df4d53ef7cfbd745",
+      "size": 12040,
+      "url": "https://api.github.com/repos/IzayTO/Sky-Explorer/git/blobs/705b62c9c1bdd77c890ae835df4d53ef7cfbd745"
+    },
+    {
+      "path": "world-lighting.js",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "eb10a7ddd5728c101c29795744335aaf82ca7a7d",
+      "size": 7021,
+      "url": "https://api.github.com/repos/IzayTO/Sky-Explorer/git/blobs/eb10a7ddd5728c101c29795744335aaf82ca7a7d"
+    }
+  ],
+  "truncated": false
+}

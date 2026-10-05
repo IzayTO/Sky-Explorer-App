@@ -1,0 +1,17 @@
+{
+  "id": "./",
+  "name": "Sky Explorer · A cielo abierto",
+  "short_name": "Sky Explorer",
+  "lang": "es",
+  "description": "Dos horizontes, el paso de la luz y todo un cielo por descubrir.",
+  "start_url": "./?inicio=pwa",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "landscape",
+  "background_color": "#111d25",
+  "theme_color": "#10191c",
+  "icons": [
+    {"src":"./icon-192.png","sizes":"192x192","type":"image/png","purpose":"any"},
+    {"src":"./icon-512.png","sizes":"512x512","type":"image/png","purpose":"any maskable"}
+  ]
+}

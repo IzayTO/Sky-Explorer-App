@@ -1,0 +1,137 @@
+PASOS PARA ISAI — QUÉ HAGO AHORA
+
+Todo se hace desde el iPhone. No necesitas compilar ni ejecutar comandos.
+El ZIP principal es Sky-Explorer-WebGPU-PWA.zip. El ZIP separado de respaldo
+se guarda por si quieres volver a la fuente anterior; no lo subas ahora.
+
+1. GUARDAR LOS ZIP
+Toca Sky-Explorer-WebGPU-PWA.zip en la respuesta → Compartir → Guardar en
+Archivos → elige una carpeta → Guardar. Guarda también el ZIP de respaldo.
+Antes de reemplazar el juego, abre tu versión actual: mochila → catálogo →
+Investigación → Cuaderno. Llévalo a una casilla a mano, selecciónalo y usa el
+botón de acción. Toca Exportar expedición y guarda el JSON en Archivos.
+Ese JSON contiene bases, mochila y cuaderno; el ZIP es el código del juego.
+
+2. DESCOMPRIMIR
+Abre Archivos → busca Sky-Explorer-WebGPU-PWA.zip → tócalo una vez.
+Archivos crea una carpeta. Entra: debes ver index.html, app.js y los demás
+archivos sueltos. No combines su contenido con el ZIP de respaldo.
+
+3. QUÉ SUBIR
+Sube TODOS los archivos dentro de esa carpeta, incluidos documentos,
+licencias, imágenes, módulos Three, manifest y service-worker.js.
+Sube el contenido, no el ZIP ni la carpeta que lo envuelve.
+
+4. REEMPLAZAR LOS ANTIGUOS
+No borres previamente el repositorio ni sus archivos. Sube sobre la raíz:
+los nombres coincidentes se reemplazan y los nuevos se añaden.
+No cambies nombres, extensiones ni contenido. No borres datos de Safari.
+
+5. SUBIR A GITHUB
+En Safari abre https://github.com/IzayTO/Sky-Explorer e inicia tu sesión.
+Ve a Code → comprueba main → Add file → Upload files → choose your files.
+Elige Explorar/Archivos → entra a la carpeta descomprimida → Seleccionar →
+selecciona todos los archivos → Abrir. Espera que termine la carga.
+Si no ves Add file, usa el menú de Safari → Solicitar sitio web de escritorio.
+El paquete queda por debajo de 100 archivos y cada archivo de 25 MiB.
+
+6. CONFIRMAR
+En la pantalla de carga escribe, por ejemplo, “Sky Explorer WebGPU y PWA”.
+Elige Commit directly to the main branch → Commit changes.
+Haz un solo commit con el paquete completo para publicar una versión coherente.
+Esta confirmación la haces tú; no se ha realizado ningún cambio remoto por ti.
+
+7. COMPROBAR PAGES
+En el repositorio: Settings → Pages → Build and deployment.
+Source: Deploy from a branch. Branch: main. Folder: /(root).
+Toca Save si cambiaste esos valores. Si ya estaban así, consérvalos.
+
+8. ESPERAR LA PUBLICACIÓN
+GitHub publica automáticamente después del commit. Tú no compilas nada.
+En Actions puedes ver el trabajo de Pages; espera a que termine en verde.
+No hay un tiempo fijo: no abras para probar la actualización mientras siga
+publicándose. Si falla, abre ese trabajo y revisa su mensaje de error.
+
+9. ABRIR LA URL CORRECTA
+En Safari abre https://izayto.github.io/Sky-Explorer/ con Internet.
+No abras index.html desde Archivos. En el selector de Tierra/Luna espera
+“Disponible sin conexión · Tierra y Luna”. Después entra a ambos destinos.
+La primera preparación de Luna y de sus shaders puede tardar un poco.
+
+10. RECARGAR DESPUÉS DE UNA ACTUALIZACIÓN
+En el selector, si aparece “Actualización lista · Guardar y recargar”, tócalo.
+Guarda tus datos y activa una versión completa. Si no aparece, mantén el dedo
+sobre A CIELO ABIERTO aproximadamente un segundo → Buscar actualización →
+Cerrar. Espera la descarga y acepta el botón cuando esté listo.
+Una recarga normal de Safari no equivale a borrar el Service Worker.
+Para un restablecimiento completo de su caché, usa el paso 16.
+
+11. INSTALAR EN INICIO
+Desde esa URL en Safari: Compartir (o Más → Compartir) → Añadir a pantalla
+de inicio. Si aparece “Abrir como app web”, actívalo → Añadir.
+Si no ves la opción, baja en el menú Compartir y revisa Editar acciones.
+Abre el nuevo icono CON INTERNET y espera de nuevo “Disponible sin conexión”.
+La app instalada puede necesitar su propia primera descarga.
+
+12. COMPROBAR QUE ES PWA
+Abre desde el icono. Debe abrirse como app, sin la barra normal de Safari.
+En el selector, mantén A CIELO ABIERTO alrededor de un segundo: en diagnóstico
+busca “Ventana: PWA / pantalla de inicio”. Usa el iPhone horizontal.
+Si no gira, desactiva el bloqueo de orientación desde el Centro de control.
+Si no aparecen tus bases de Safari, usa Cuaderno → Importar y selecciona el
+JSON del paso 1. Revisa la confirmación: sustituye la expedición de esa app.
+
+13. COMPROBAR WEBGPU
+En ese mismo panel busca “Renderer: WebGPU” y “Gráficos listos: sí”.
+Si indica “WebGL fallback”, debajo aparece el motivo. No hay que elegir el
+renderer manualmente. Safari/iOS 26 introdujo WebGPU: comprueba que tu iPhone
+esté actualizado y permite completar la inicialización. Si sigue en fallback,
+conserva el mensaje del motivo; ese camino mantiene el juego completo.
+No se garantiza que todos los dispositivos o sesiones admitan WebGPU.
+
+14. PROBAR SIN INTERNET
+Dentro de la app instalada, espera el estado offline completo. Entra a Tierra
+y Luna, vuelve al selector y cierra la app desde el selector de aplicaciones.
+Activa modo avión y apaga también Wi-Fi, porque puede seguir encendido.
+Abre el icono de Sky Explorer y prueba ambos destinos, mochila y construcción.
+Vuelve a activar Internet al terminar. No borres los datos del sitio.
+
+15. FUTURAS ACTUALIZACIONES
+Guarda una exportación de tu expedición. Sube TODO el contenido de la siguiente
+entrega preparada, incluido el nuevo service-worker.js, en un solo commit.
+Espera Pages en verde → abre conectado → acepta Guardar y recargar.
+No cambies archivos por separado dejando un worker generado para otros bytes.
+El sistema verifica hashes; una publicación incompleta no reemplaza la anterior.
+No necesitas ejecutar preparar-offline.py: la entrega ya viene preparada.
+
+16. SI SAFARI CONSERVA UNA VERSIÓN ANTIGUA
+Primero usa Buscar actualización. Si sigue igual, desde el selector abre el
+diagnóstico → Restablecer solo la caché offline. Cierra TODAS las pestañas de
+Sky Explorer y la app instalada. Vuelve a abrir con Internet y espera el
+estado offline completo. Repite dentro de la app si usa otro almacén.
+No uses “Borrar historial y datos de sitios web”: puede borrar tus partidas.
+No desinstales la app para actualizar; tampoco es necesario hacerlo.
+Si esta primera instalación todavía muestra la versión original, cierra sus
+pestañas y vuelve a abrir la URL cuando Pages haya terminado de publicar.
+
+17. VOLVER A LA VERSIÓN ANTERIOR
+Exporta la expedición actual. En la versión nueva, usa Restablecer solo la
+caché offline y cierra todas sus ventanas/app ANTES de regresar al código viejo.
+Descomprime Sky-Explorer-respaldo-original.zip. Sube sus 38 archivos a la raíz
+de main, reemplazando los del mismo nombre, y haz Commit changes.
+Espera Pages en verde y abre conectado. Los archivos nuevos sobrantes pueden
+quedarse: el index.html original no los carga ni registra el Service Worker.
+Si una app o pestaña mantiene todavía el worker, vuelve al diagnóstico de esa
+copia y restablece su caché antes de cerrarla. No borres datos de partidas.
+El respaldo es la instantánea exacta auditada de main. Ya no incluye PWA/WebGPU.
+Si falta tu base al cambiar entre Safari y app, importa tu expedición guardada.
+
+REFERENCIAS OFICIALES
+Apple — Añadir una web a la pantalla de inicio:
+https://support.apple.com/en-lamr/guide/iphone/iphea86e5236/ios
+GitHub — Fuente de publicación de Pages:
+https://docs.github.com/en/pages/getting-started-with-github-pages/configuring-a-publishing-source-for-your-github-pages-site
+GitHub — Subir archivos:
+https://docs.github.com/en/repositories/working-with-files/managing-files/adding-a-file-to-a-repository
+WebKit — WebGPU en Safari 26:
+https://webkit.org/blog/17333/webkit-features-in-safari-26-0/

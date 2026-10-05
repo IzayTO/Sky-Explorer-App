@@ -1,0 +1,180 @@
+SKY EXPLORER 4.0 — CAMBIOS WEBGPU / PWA
+Preparado sobre IzayTO/Sky-Explorer, main.
+Árbol fuente: bae6a25951db574892fa63075a35cd7eec95e2b4.
+Se leyó el árbol completo: 38 archivos, sin directorios ni AGENTS.md.
+37 archivos coincidían con la copia anterior; earth.jpg se obtuvo de main
+para conservar EXACTAMENTE la imagen actual. El remoto no fue modificado.
+
+ALCANCE
+Se conserva la aplicación completa, incluidos Tierra y Luna, aspecto del
+cielo, geometrías, relieve, texturas, estrellas, césped, colisiones, gravedad,
+vehículos, audio, inventario, constructor, instrumentos, guías y guardados.
+No se añaden piezas de juego ni controles nuevos de construcción. Los únicos
+paneles añadidos son estado/actualización offline y diagnóstico voluntario.
+
+RENDERER
+El original usaba Three r160 + WebGLRenderer. Esta entrega incluye Three
+0.186.1 completo para estos sistemas, servido localmente. No usa un CDN.
+Se detecta navigator.gpu en contexto seguro, se espera renderer.init() y se
+comprueba que el backend sea realmente WebGPU. Si falla, se crea el
+WebGLRenderer clásico de la misma versión; no se deja una escena vacía.
+
+Los 17 programas GLSL distintos del proyecto se portaron a TSL/NodeMaterial
+conservando sus ecuaciones y uniforms. El resultado se entrega ya generado
+en gpu-materials.js; el iPhone no descarga ni ejecuta un traductor GLSL.
+Incluye atmósfera, Sol, Luna/fases/terminador, Vía Láctea, estrellas, planetas,
+cielo lunar, Tierra vista desde la Luna, terreno, césped, vehículos, props,
+fantasma, láser, sombras de construcción y caché de iluminación lunar.
+Los materiales básicos del gizmo, contornos y punto del láser también
+pasan por materiales compatibles con WebGPU.
+
+WebGPU no admite tamaños variables de gl_PointSize. Los mismos 41.411
+registros y 96.000 puntos decorativos se dibujan con pequeños cuadrados
+instanciados, recortados por el perfil luminoso original. No se eliminan
+estrellas ni se altera su brillo, posición, diámetro o umbral de aparición.
+Los atributos estáticos se comparten entre los dos cielos.
+
+Se preserva la salida de color de los shaders originales. Ya calculaban
+RGB de pantalla: aplicar además la conversión final por defecto del nuevo
+renderer habría aclarado la imagen. Se usa un buffer directo, con conversión
+explícita solo para los pocos materiales básicos que la necesitaban.
+Esto también evita un framebuffer y una pasada completa innecesarios.
+La textura intermedia de luz lunar se orienta correctamente en WebGPU.
+Las texturas de datos conservan NoColorSpace; la reconstrucción del BVH
+actualiza realmente la textura que consumen los shaders portados.
+
+FALLBACK Y RECUPERACIÓN
+No hay un subsistema del juego dejado deliberadamente en WebGL cuando
+WebGPU está activo. No se mezclan GLSL/WebGL y WebGPU en un mismo canvas.
+Si el dispositivo no ofrece WebGPU, falla su inicialización, aparece un
+shader no migrado o se pierde el dispositivo, el fallback es la escena
+COMPLETA con WebGL. Una avería durante el juego guarda los datos persistentes
+y recarga una sola vez en WebGL; vuelve al selector de destino.
+La decisión de recuperación queda en sessionStorage para evitar un bucle
+de recargas en esa pestaña. Se muestra el motivo en diagnóstico y consola.
+Restablecer solo la caché offline también retira esa decisión temporal.
+El contexto WebGL conserva sus eventos de pérdida/restauración.
+
+Diagnóstico: window.SkyDiagnostics y log “Renderer: WebGPU” o “WebGL fallback”.
+Sin consola: ?diagnostico=1, o mantener el dedo sobre A CIELO ABIERTO en el
+selector. Indica renderer, r186, estado standalone, caché, densidad interna
+y promedio reciente de tiempos de frame en calidad Auto. No es un benchmark.
+
+PWA Y OFFLINE
+Manifest relativo: id ./, start_url ./?inicio=pwa, scope ./, standalone,
+orientación landscape. Incluye theme-color, viewport-fit=cover, metadatos
+Apple e iconos 180/192/512 a partir del favicon original.
+Se conservan los márgenes seguros de controles e inventario existentes;
+se ajusta el selector de destino para la ventana instalada de iPhone.
+
+service-worker.js contiene la lista de recursos con SHA-256 y tamaño:
+HTML, estilos, módulos de ambos renderers, shaders TSL, datos/catálogo,
+las cuatro imágenes, iconos, manifest y documentación. El audio y los modelos
+son procedurales: sus módulos JS son sus recursos offline. No faltan archivos
+MP3 o GLB: el repositorio no los usa.
+
+Descarga tres recursos simultáneos como máximo. Cada respuesta se verifica
+contra su hash antes de guardarla. La versión solo queda lista cuando TODOS
+los archivos están completos. Un corte, archivo ausente, cuota insuficiente
+o despliegue parcial cancela esa instalación y conserva la versión anterior.
+
+Nombre en /Sky-Explorer/:
+  sky-explorer-_Sky_Explorer_-v4-<hash de 16 caracteres>
+El nombre exacto de la entrega aparece en el panel diagnóstico. El hash
+incluye los archivos y la lógica del Service Worker. Se genera automáticamente
+al preparar el ZIP. La caché pequeña “...-clients-v1” contiene únicamente
+qué versión usa cada ventana; nunca contiene inventarios o construcciones.
+
+Los recursos se sirven desde una versión completa, normalizando ?v= de los
+imports. Las rutas siempre se resuelven respecto al subdirectorio real.
+Una ventana ya abierta queda vinculada a su versión aun si otra acepta
+actualizar. Al navegar/recargar entra a la versión activa. Las versiones
+antiguas sin ventanas se limpian en una activación posterior.
+No se vuelve a la red a buscar un JS ausente que podría pertenecer a otra
+publicación: se informa del recurso incompleto en lugar de mezclar versiones.
+
+ACTUALIZACIONES
+El registro usa updateViaCache:none. Busca cambios al registrar/abrir,
+recuperar Internet o volver a una ventana visible (limitado a una búsqueda
+por minuto). La descarga verificada nueva espera; no reinicia una partida.
+En el selector aparece “Actualización lista · Guardar y recargar”. Ese botón
+guarda los formatos actuales, activa el worker y recarga. Si cierras todas
+las ventanas, el navegador también puede activar la versión pendiente.
+Una versión nueva debe incluir su service-worker.js regenerado.
+
+El ZIP ya está listo. No ejecutes comandos para publicarlo. Para futuras
+ediciones del código, preparar-offline.py y service-worker.template.txt
+permiten regenerar el worker con Python antes de entregar/subir la versión.
+Cambiar solo una textura o un JS sin regenerar el worker NO constituye una
+publicación offline coherente. Sube el paquete completo de cada actualización.
+
+GUARDADOS
+Claves y formatos conservados:
+ a-cielo-abierto-prefs-v1
+ sky-expedition-inventory-v1
+ sky-expedition-world-earth-v1
+ sky-expedition-world-moon-v1
+ sky-expedition-journal-v1
+ sky-expedition-date
+ sky-guide-earth-31 / sky-guide-moon-31
+No hay migración destructiva ni localStorage.clear ni borrado de IndexedDB.
+La caché técnica y las partidas están separadas. El botón diagnóstico
+“Restablecer solo la caché offline” borra únicamente cachés con el prefijo
+propio y retira el registro del worker. Después cierra todas las ventanas de
+Sky y reabre conectado. No borra los guardados ni datos de otros proyectos.
+
+Safari y la app instalada pueden usar almacenes separados. No es posible
+forzar desde la web que compartan datos existentes. Usa Cuaderno → Exportar
+expedición en Safari y Cuaderno → Importar en la app si tus bases no aparecen.
+No borres “datos de sitios web” de Safari para actualizar: eso sí podría
+borrar los guardados por una acción del sistema, ajena al worker.
+
+LIMITACIONES CONOCIDAS
+• WebGPU requiere un Safari/WebKit compatible (Safari/iOS 26 introdujo
+  soporte); detectar navigator.gpu no basta: el dispositivo debe inicializar.
+• Three WebGPURenderer sigue evolucionando. Está fijada la versión 0.186.1;
+  no se actualiza silenciosamente desde Internet.
+• Las validaciones de WGSL y envío de comandos se hicieron con Dawn nativo,
+  backend null. Verifican APIs/programas, no píxeles ni velocidad de un iPhone.
+  No se ha probado visualmente toda la app en Safari de un iPhone físico.
+• La mejora real de FPS no se garantiza. Se mantiene la complejidad visual;
+  el relieve, sombras, bases grandes y temperatura del teléfono siguen pesando.
+• WebKit puede retirar almacenamiento bajo presión. persist() es una solicitud,
+  no una garantía. Verifica “Disponible sin conexión” en la app instalada.
+• Landscape es una preferencia del manifest; iOS puede ignorar el bloqueo.
+  Usa el teléfono horizontal con el bloqueo de orientación desactivado.
+• La PWA sigue siendo una web instalada, no un IPA ni una app de App Store.
+
+ARCHIVOS NUEVOS
+• CAMBIOS-WEBGPU-PWA.txt
+• DIAGNOSTICO-RENDIMIENTO.txt
+• HISTORIAL-3.2.txt
+• ORIGEN-REPOSITORIO.json
+• PASOS-PARA-ISAI.txt
+• VERIFICACION.txt
+• apple-touch-icon.png
+• gpu-adapter.js
+• gpu-materials.js
+• icon-192.png
+• icon-512.png
+• manifest.webmanifest
+• preparar-offline.py
+• pwa.css
+• pwa.js
+• renderer-factory.js
+• service-worker.js
+• service-worker.template.txt
+• star-field.js
+• three.core.js
+• three.tsl.js
+• three.webgpu.js
+
+Los otros archivos se entregan completos también. Muchos módulos existentes
+solo cambian el sufijo de sus imports a ?v=4.0.0 para evitar mezclar motores.
+El ZIP principal no incluye pruebas, node_modules ni herramientas nativas.
+
+REFERENCIAS TÉCNICAS OFICIALES
+https://threejs.org/manual/en/webgpurenderer.html
+https://threejs.org/docs/pages/WebGPURenderer.html
+https://webkit.org/blog/17333/webkit-features-in-safari-26-0/
+https://webkit.org/blog/14403/updates-to-storage-policy/
