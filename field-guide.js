@@ -1,4 +1,4 @@
-import {ITEMS,itemIcon} from './items.js?v=4.0.0';
+import {ITEMS,itemIcon} from './items.js?v=4.1.0';
 const GUIDES={
  identifier:['Identificar y registrar','Selecciona este instrumento y lleva el punto central a la Luna, el Sol, un planeta o una estrella visible. Mantén el botón de acción o el clic hasta completar el círculo.','El nombre aparece al apuntar. Tras mantenerlo unos instantes, la observación entra en tu cuaderno.','Para reconocer el cielo y desbloquear filtros. Si no encuentras un planeta, usa primero el visor celeste.'],
  visor:['Encontrar astros','Selecciona las gafas para ponértelas. Aparecen etiquetas sobre los astros que tienes delante y una tonalidad azul verdosa suave. El botón de acción permite apagarlas; cambiar de casilla también las quita.','Verás nombres y distancias aproximadas de los planetas, el Sol y la Luna/Tierra. Las estrellas muestran temperatura estimada; su distancia no está en este catálogo y no se inventa.','Úsalo para localizar un astro antes de identificarlo o apuntar el telescopio. Las etiquetas se ocultan detrás del terreno y de construcciones.'],

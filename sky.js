@@ -1,6 +1,6 @@
-import {createStarField} from './star-field.js?v=4.0.0';
+import {createStarField} from './star-field.js?v=4.1.0';
 import * as THREE from './three.module.js?v=4.0.0';
-import {catalog} from './star-catalog.js?v=4.0.0';
+import {catalog} from './star-catalog.js?v=4.1.0';
 
 // Adapted from Paraíso's atmosphere.js and stars.js: clip-space background,
 // inverse camera projection, layered directional twilight and a single star draw.
@@ -11,9 +11,10 @@ const TAU=Math.PI*2;
 const vertex=`uniform mat4 inverseProjection;uniform mat4 cameraWorld;varying vec3 vRay;
 void main(){vec4 r=inverseProjection*vec4(position.xy,1.,1.);vRay=mat3(cameraWorld)*r.xyz;gl_Position=vec4(position.xy,1.,1.);}`;
 const noiseGLSL=`
+uniform float skyDetail;
 float hash(vec3 p){p=fract(p*.3183099+vec3(.11,.37,.71));p*=17.;return fract(p.x*p.y*p.z*(p.x+p.y+p.z));}
 float noise3(vec3 p){vec3 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(mix(hash(i),hash(i+vec3(1,0,0)),f.x),mix(hash(i+vec3(0,1,0)),hash(i+vec3(1,1,0)),f.x),f.y),mix(mix(hash(i+vec3(0,0,1)),hash(i+vec3(1,0,1)),f.x),mix(hash(i+vec3(0,1,1)),hash(i+vec3(1,1,1)),f.x),f.y),f.z);}
-float fbm(vec3 p){return .52*noise3(p)+.27*noise3(p*2.07+4.3)+.14*noise3(p*4.13+12.7)+.07*noise3(p*8.19);}
+float fbm(vec3 p){float clouds=.52*noise3(p)+.27*noise3(p*2.07+4.3);if(skyDetail>.5)clouds+=.14*noise3(p*4.13+12.7)+.07*noise3(p*8.19);return clouds;}
 `;
 const atmosphereGLSL=`uniform vec3 sunDirection,moonDirection;uniform float day,twilight,night,moonlight,sunset;
 vec3 atmosphereColor(vec3 d){float h=max(d.y,0.);float sh=sunDirection.y;
@@ -64,7 +65,7 @@ const UP=new THREE.Vector3(0,1,0),GALACTIC_NORMAL=equatorial(192.8595,27.1283),G
 export class Sky {
   constructor(scene,moonTexture){
     this.sun=new THREE.Vector3();this.moon=new THREE.Vector3();this.field=new THREE.Matrix4();this.equatorialTilt=new THREE.Matrix4().makeRotationX(-69*Math.PI/180);this.rotation=new THREE.Matrix4();
-    this.u={moonNatural:{value:1},inverseProjection:{value:new THREE.Matrix4()},cameraWorld:{value:new THREE.Matrix4()},sunDirection:{value:this.sun},moonDirection:{value:this.moon},day:{value:1},twilight:{value:0},night:{value:0},moonlight:{value:0},sunset:{value:1},phase:{value:.17},time:{value:0},moonMap:{value:moonTexture},pixelRatio:{value:1},zoomReveal:{value:0},starLimit:{value:5.8},field:{value:this.field},milkyOn:{value:1},galacticNormal:{value:new THREE.Vector3()},galacticCenter:{value:new THREE.Vector3()},galacticTangent:{value:new THREE.Vector3()}};
+    this.u={skyDetail:{value:1},moonNatural:{value:1},inverseProjection:{value:new THREE.Matrix4()},cameraWorld:{value:new THREE.Matrix4()},sunDirection:{value:this.sun},moonDirection:{value:this.moon},day:{value:1},twilight:{value:0},night:{value:0},moonlight:{value:0},sunset:{value:1},phase:{value:.17},time:{value:0},moonMap:{value:moonTexture},pixelRatio:{value:1},zoomReveal:{value:0},starLimit:{value:5.8},field:{value:this.field},milkyOn:{value:1},galacticNormal:{value:new THREE.Vector3()},galacticCenter:{value:new THREE.Vector3()},galacticTangent:{value:new THREE.Vector3()}};
     this.atmosphere=backdrop(scene,this.u,`
       varying vec3 vRay;${atmosphereGLSL}
       void main(){vec3 sky=atmosphereColor(normalize(vRay));float dither=fract(52.9829189*fract(dot(gl_FragCoord.xy,vec2(.06711056,.00583715))))-.5;gl_FragColor=vec4(sky+dither/255.,1.);}
@@ -78,8 +79,7 @@ export class Sky {
         // Cartesian galactic coordinates avoid a longitude seam. Unequal arms,
         // an extended central bulge and local dust lanes replace a uniform band.
         float clouds=fbm(g*vec3(8.,17.,10.)+vec3(3.1,7.4,1.2));
-        float knots=noise3(g*32.+vec3(9.2,1.8,4.));
-        float fine=noise3(g*83.+vec3(4.7,12.,6.));
+        float knots=.5,fine=.5;if(skyDetail>.5){knots=noise3(g*32.+vec3(9.2,1.8,4.));fine=noise3(g*83.+vec3(4.7,12.,6.));}
         float central=pow(max(0.,g.x),6.);
         float arm=.40+.36*noise3(vec3(g.x*4.,g.z*4.,2.8))+.38*central;
         float bend=.022*sin(g.z*5.+g.x*2.)+(clouds-.5)*.065;
@@ -169,6 +169,7 @@ export class Sky {
     this.stars=createStarField(geo,mat);this.stars.frustumCulled=false;this.stars.renderOrder=-9998;scene.add(this.stars);
   }
   update(camera,state,t,pixelRatio){
+    this.u.skyDetail.value=state.graphics?.advancedSky===false?0:1;
     const a=(state.hour-6)/24*TAU,path=state.path*Math.PI/2;
     // Rounded orbital coefficients used to shorten this vector around noon.
     // With acos(dot) that made the smallest possible angle larger than the disc.

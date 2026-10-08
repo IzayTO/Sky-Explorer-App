@@ -43,8 +43,10 @@ function renderDiagnostics(){if(!details)return;const g=window.SkyDiagnostics||{
  'Offline: '+(p.ready?'Tierra y Luna guardadas':'descarga pendiente'),
  'Caché: '+(p.version||'preparando'),
  'Archivos: '+(p.files||'—'),
- 'Densidad interna: '+(g.pixelRatio||1).toFixed(2),
+ 'Perfil gráfico: '+({auto:'Automático',performance:'Rendimiento',balanced:'Equilibrado',quality:'Calidad'}[g.profile]||'Automático'),
+ 'Escala de píxeles 3D: '+(g.pixelRatio||1).toFixed(2),
  'Promedio reciente: '+(g.averageFrameMs?g.averageFrameMs+' ms / frame':'entra a un destino para medir'),
+ Number.isFinite(g.drawCalls)?'Draw calls del último frame: '+g.drawCalls:'',
  g.reason?'Motivo del fallback: '+g.reason:'',installError?'Descarga pendiente: '+installError:''
  ].filter(Boolean).join('\n');}
 function openDiagnostics(){

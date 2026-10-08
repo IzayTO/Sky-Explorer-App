@@ -1,8 +1,8 @@
 import * as THREE from './three.module.js?v=4.0.0';
-import {worldLightGLSL,worldUniforms} from './world-lighting.js?v=4.0.0';
-import {LunarLightCache,heightGLSL,cacheGLSL} from './lunar-light-cache.js?v=4.0.0';
-import {clamp} from './sky.js?v=4.0.0';
-import {flashlightGLSL,vehicleLightGLSL,vehicleLightUniforms,updateVehicleLightUniforms} from './flashlight.js?v=4.0.0';
+import {worldLightGLSL,worldUniforms} from './world-lighting.js?v=4.1.0';
+import {LunarLightCache,heightGLSL,cacheGLSL} from './lunar-light-cache.js?v=4.1.0';
+import {clamp} from './sky.js?v=4.1.0';
+import {flashlightGLSL,vehicleLightGLSL,vehicleLightUniforms,updateVehicleLightUniforms} from './flashlight.js?v=4.1.0';
 
 // One continuous height field drives both the drawn surface and foot collision.
 // Directional and torch occlusion sample that same field: no fake shadow decals.
@@ -23,14 +23,14 @@ export class LunarTerrain{
       fragmentShader:`precision highp float;varying vec3 vWorld,vNormal;uniform sampler2D grain;uniform vec3 sun,earth,eye,forward;uniform float earthPower,torch,quality;
       ${flashlightGLSL}${vehicleLightGLSL}${worldLightGLSL}
       ${heightGLSL}${cacheGLSL}
-      float torchShadow(vec3 p,vec3 l,float len){float v=1.;for(int i=1;i<13;i++){float f=float(i)/13.;vec3 q=p+l*len*f;v=min(v,smoothstep(-.08,.12,q.y-triangleHeight(q.xz)));if(v<.001)break;}return v;}
+      float torchShadow(vec3 p,vec3 l,float len){float v=1.,steps=mix(7.,13.,terrainShadowDetail);for(int i=1;i<13;i++){if(float(i)>=steps)break;float f=float(i)/steps;vec3 q=p+l*len*f;v=min(v,smoothstep(-.08,.12,q.y-triangleHeight(q.xz)));if(v<.001)break;}return v;}
       void main(){vec3 p=vWorld,n=normalize(vNormal);float distanceToEye=distance(p,eye);
         float grains=texture2D(grain,p.xz*.19).r;float mottling=texture2D(grain,p.xz*.0071+vec2(.34,.57)).r;
         // Screen-space differential micro-normal. It fades before it aliases.
         vec3 dx=dFdx(p),dy=dFdy(p);float dhx=dFdx(grains),dhy=dFdy(grains);
         vec3 r1=cross(dy,n),r2=cross(n,dx);float det=dot(dx,r1);
         vec3 bump=sign(det)*(dhx*r1+dhy*r2)/max(abs(det),.00001);
-        n=normalize(n-bump*.037*(1.-smoothstep(25.,110.,distanceToEye)));
+        n=normalize(n-bump*.037*(1.-smoothstep(25.*quality,110.*quality,distanceToEye)));
         vec3 safePoint=p+normalize(vNormal)*.24;
         float solar=max(0.,dot(n,sun)),earthLit=max(0.,dot(n,earth));
         float s=0.,e=0.;if(solar>.001&&sun.y>-.01)s=solar*cachedTerrainShadow(safePoint,sun,0.)*baseVisibility(p+normalize(vNormal)*.03,sun,2000.)*vehicleOcclusion(p+normalize(vNormal)*.004,sun);
@@ -75,7 +75,7 @@ export class LunarTerrain{
     const tile=256;
     for(let z=-outer;z<outer;z+=tile)for(let x=-outer;x<outer;x+=tile){if(x>=-inner&&x<inner&&z>=-inner&&z<inner)continue;
       const seg=tile/step,p=[],normal=[],idx=[];
-      for(let j=0;j<=seg;j++)for(let i=0;i<=seg;i++){const px=x+i*step,pz=z+j*step;p.push(px,this.heightAt(px,pz),pz);const n=new THREE.Vector3(this.heightAt(px-2,pz)-this.heightAt(px+2,pz),4,this.heightAt(px,pz-2)-this.heightAt(px,pz+2)).normalize();normal.push(n.x,n.y,n.z);}
+      const n=new THREE.Vector3();for(let j=0;j<=seg;j++)for(let i=0;i<=seg;i++){const px=x+i*step,pz=z+j*step;p.push(px,this.heightAt(px,pz),pz);n.set(this.heightAt(px-2,pz)-this.heightAt(px+2,pz),4,this.heightAt(px,pz-2)-this.heightAt(px,pz+2)).normalize();normal.push(n.x,n.y,n.z);}
       for(let j=0;j<seg;j++)for(let i=0;i<seg;i++){const a=j*(seg+1)+i,b=a+1,c=a+seg+1,d=c+1;idx.push(a,c,b,b,c,d);}
       const edge=[];for(let i=0;i<=seg;i++)edge.push(i);for(let i=1;i<=seg;i++)edge.push(i*(seg+1)+seg);for(let i=seg-1;i>=0;i--)edge.push(seg*(seg+1)+i);for(let i=seg-1;i>0;i--)edge.push(i*(seg+1));
       const start=p.length/3;for(const i of edge){p.push(p[i*3],p[i*3+1]-6,p[i*3+2]);normal.push(normal[i*3],normal[i*3+1],normal[i*3+2]);}
@@ -84,6 +84,7 @@ export class LunarTerrain{
     }
   }
   prepareLighting(renderer,camera,sky){this.lightCache.update(renderer,camera.position,sky.sun,sky.moon);}
+  configureGraphics(options){this.u.quality.value=options.distance==='low'?.5:options.distance==='medium'?.75:1;this.lightCache.configureGraphics(options);}
   visibleFrom(point,direction){if(direction.y<-.08)return 0;for(let d=8;d<1400;d=d*1.35+5){const x=point.x+direction.x*d,z=point.z+direction.z*d;if(this.heightAt(x,z)>point.y+direction.y*d+.35)return 0;}return 1;}
   update(camera,sky,t,state={}){const dt=clamp(t-this.lastTime,0,.05)||.016;this.lastTime=t;updateVehicleLightUniforms(this.u,state.vehicleLighting);this.torchLevel+=((state.flashlight?1:0)-this.torchLevel)*(1-Math.exp(-dt*13));this.u.torch.value=this.torchLevel;this.u.eye.value.copy(camera.position);camera.getWorldDirection(this.u.forward.value);this.u.sun.value.copy(sky.sun);this.u.earth.value.copy(sky.moon);this.u.earthPower.value=sky.earthshine;}
 }

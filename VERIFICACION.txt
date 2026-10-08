@@ -1,101 +1,81 @@
-SKY EXPLORER 4.0 — VERIFICACIÓN DE LA ENTREGA
+SKY EXPLORER APP 4.1 — VERIFICACIÓN DE ESTA ACTUALIZACIÓN
 
-QUÉ SIGNIFICA “COMPROBADO” EN ESTA ENTREGA
-Se ejecutaron pruebas de lógica con DOM simulado y validación gráfica nativa.
-No se dispuso de Safari de un iPhone físico para revisar píxeles, gestos reales,
-audio, instalación del icono o FPS. Esas comprobaciones se distinguen abajo.
-No se presenta una simulación de navegador como una prueba en el teléfono.
+FUENTE
+Se descargó main de IzayTO/Sky-Explorer-App en una copia temporal.
+60 archivos originales verificados contra sus hashes git del árbol
+2d2c7fae61606c6811a8c3c4edffbe4fbdb899c7
+(commit f70f1c5ccf5541f10140c09650aee87a99b868a8).
+No se hicieron commits, ramas, pushes ni cambios remotos.
 
-FUENTE Y PAQUETE
-• Árbol de main: bae6a25951db574892fa63075a35cd7eec95e2b4.
-• Se conservan los 38 nombres de archivo del original y sus sistemas.
-• Las cuatro imágenes y el catálogo estelar conservan los bytes originales.
-• Los módulos de juego, excepto las adaptaciones gráficas/CPU documentadas,
-  conservan su lógica. Todos los imports ahora apuntan a módulos locales r186.
-• Sin dependencias de CDN ni herramientas de compilación para abrir la web.
-• Sintaxis JS, cierre de imports/rutas locales y estructura del ZIP comprobados.
-• El ZIP de respaldo contiene los 38 archivos exactos de la fuente auditada,
-  contrastados con sus hashes Git. No contiene una copia de tus partidas:
-  las partidas están en tu navegador y se exportan mediante el cuaderno.
+AUTOMATIZACIÓN LOCAL
+Se ejecuta el app.js real con DOM/canvas/audio/renderer de prueba para lógica:
+• Entrada Tierra/Luna, gravedad, inventario 30+10 y catálogo.
+• Construcción modular, techos, paredes, snap y planos virtuales.
+• Rotación libre/ejes, cimientos rotados, rampas adaptativas y soporte.
+• Picking original sobre piezas instanciadas; borrado, edición y colisiones.
+• Deshacer/rehacer, apilar, recuperar, lanzar y conservar objetos.
+• Telescopio sobre cimientos: mirar y salir sin hundirlo.
+• Catálogo táctil: scroll frente a arrastre/pulsación larga.
+• Fantasma cancelado frente a gesto de mirada; superficies sin z-fighting.
+• Identificador de Luna/planetas, visor, instrumentos, láser con distintos FOV.
+• Controles de construcción, acciones y atajos de inventario.
+• Carga de guardados reales antiguos de la versión 3.2 y reapertura:
+  objetos, ángulos libres, rampas, lámparas, drops, mochila, cuaderno y progreso.
+• Nueva clave gráfica independiente; preferencias anteriores conservadas.
 
-WEBGPU
-VALIDADO con Three 0.186.1 y Dawn nativo, backend null:
-• Inicialización asíncrona real de WebGPURenderer.
-• Compilación de los 17 pares de shaders migrados a TSL/WGSL.
-• Envío de comandos de las escenas de Tierra y Luna.
-• Materiales de props/fantasma y textura BVH al reconstruir la base.
-• Pasada de iluminación lunar en RenderTarget.
-• Materiales básicos del gizmo/contornos y limpieza de profundidad del overlay.
-• Rechazo explícito de un shader que no estuviera migrado.
-• Notificación de pérdida simulada del dispositivo.
-• Detección automática de ausencia de WebGPU y ruta de recuperación WebGL.
+PRUEBAS NUEVAS DE RENDIMIENTO
+• Automático no baja por un frame aislado; baja ante presión sostenida,
+  alcanza niveles de densidad y recupera con histéresis.
+• Todos los presets tienen efectos reales y los overrides se guardan.
+• Resolución manual limitada, restablecimiento exclusivamente gráfico.
+• Sin generación de montañas, incluso Tierra → Luna → Tierra.
+• Pasto apagado no ejecuta culling ni dibuja el grupo; suelo/soporte intactos.
+• Densidad/rango modifican instancias/uniforms sin reconstruir geometría.
+• Instancing local conserva entidades, triángulos de picking y soporte.
+• Cambiar una lámpara no cambia revisión espacial ni reconstruye el BVH.
+• BVH coincide con pruebas CPU de cajas y la antena circular bloquea su
+  reflector sin bloquear las esquinas vacías de su antiguo rectángulo.
+• Caché lunar 512²/256² y distancia de microdetalle cambian efectivamente,
+  sin cambiar alturas, teselas ni gravedad.
+• Modo telescopio cancela construcción y aplica contexto de controles.
+• FPS opcional y preferencias persistentes.
 
-El backend null valida shaders/pipelines/API, NO genera una comparación de
-imágenes y NO mide tiempo de GPU. Algunas imágenes se reemplazan por texturas
-mínimas SOLO en ese test; el paquete publicado conserva las originales.
-La fábrica de fallback se comprobó con un renderer WebGL de prueba; no se
-confunde ese test de selección con una ejecución visual de WebGL en Safari.
-Los GLSL originales se conservaron; su compilación había sido comprobada
-con EGL. La ruta de recuperación utiliza la escena completa, no una demo.
-
-TIERRA Y LUNA: LÓGICA DE LA APP REAL
-VALIDADO en DOM simulado con resolución horizontal 844 × 390:
-• Inicialización, entrada y cambio entre ambos destinos.
-• Uniforms numéricos finitos en el ciclo de actualización.
-• Gravedad de cada entorno: Tierra 9,80665 y Luna 1,62 m/s².
-• Inventario 30 + 10 y acceso al catálogo.
-• Colocación modular de pisos, paredes y techos, plano superior de techo.
-• Cimientos vecinos, rotados y tamaños combinados; soporte de muebles.
-• Rampa adaptativa de acceso al cimiento y pendiente transitable.
-• Telescopio anclado al cimiento al mirar repetidamente arriba/abajo.
-• Anillos y deslizadores de rotación, edición independiente y borrado.
-• Deshacer/rehacer, persistencia y restauración de ángulos libres.
-• Cancelación del fantasma con toque, distinción frente a gesto de mirada.
-• Scroll táctil del catálogo, pulsación larga y arrastre.
-• Transferencia de stacks, atajos, selección, lanzamiento y menú contextual.
-• Identificación de Luna y siete planetas; guía e interruptor de lámpara.
-• Láser desde el borde en distintos FOV/aspectos y estructura de controles
-  del telescopio. El layout real de Safari no se deduce del DOM simulado.
-
-CONSERVADO Y REQUIERE REVISIÓN EN EL DISPOSITIVO
-Joystick/multitouch simultáneo, sonidos, brillo/color exacto del cielo,
-Sol/Luna/estrellas/Vía Láctea, detalle de césped y relieve, sombras visibles,
-faros, conducción/salto/boost, filtros y composición final de las interfaces.
-Sus módulos y ecuaciones se conservan y las rutas gráficas se compilan,
-pero eso no sustituye una revisión visual e interactiva en el iPhone.
-Resize y orientación conservan los handlers originales y la proyección se
-adapta al sistema de coordenadas WebGPU. Safe areas siguen siendo CSS.
-No hay medición física de temperatura, energía ni memoria máxima en Safari.
-
-GUARDADOS
-VALIDADO con la implementación anterior 3.2 escribiendo datos reales y la
-nueva leyéndolos, guardándolos y abriéndolos otra vez:
-• Ambos mundos, cimientos, mesas, lámparas, telescopio y rotaciones libres.
-• Objetos lanzados, cantidades y posiciones.
-• Las 40 casillas y selección actual de acceso rápido.
-• Cuaderno, foto de prueba y desbloqueos derivados de observaciones.
-• Igualdad de los datos serializados; mismas claves y formato.
-El exportador/importador original de expediciones no se reemplazó.
+GRÁFICOS
+GLSL: 17 parejas reales del proyecto compilan y enlazan en OpenGL local
+Mesa llvmpipe mediante EGL. Se usan sus ecuaciones originales, con adaptación
+de sintaxis de contexto. Es validación GLSL, no Safari/WebGL físico.
+Píxeles GLSL: 296 rayos dibujados verifican BVH/ventanas/paredes/rotaciones/
+sombra parabólica; props y vehículos lunares quedan oscuros sin luz solar
+bajo el horizonte y mantienen iluminación de día.
+WebGPU: Three WebGPURenderer real + Dawn de validación. 17 variantes TSL/WGSL
+compilan, crean pipelines y envían comandos, incluyendo el nuevo instancing.
+Las escenas Tierra/Luna se envían con sombras, radio, lotes y ambos perfiles
+Calidad/Rendimiento; se prueba cambio de textura BVH y render target lunar.
+Incluye resize y ayudantes con profundidad/colores de overlay.
+El adaptador null valida API/shaders/pipelines; NO mide GPU ni genera píxeles.
+Factory real: WebGPU asíncrono, sin pasada extra de salida, shaders no
+migrados rechazados, pérdida de dispositivo comunicada, fallback por ausencia
+o recuperación. El constructor WebGL del factory se sustituye en esta prueba.
+No se fuerza WebGL para hacer pasar las pruebas de TSL.
 
 PWA
-VALIDADO ejecutando el Service Worker real en un entorno de prueba de
-Cache Storage, red y clientes, con los archivos finales de producción:
-• Instalación completa con SHA-256 de cada recurso y ruta /Sky-Explorer/.
-• HTML, módulos, motor y recursos de ambos mundos disponibles sin red.
-• Inicio con ?inicio=pwa y diagnóstico con ?diagnostico=1.
-• Despliegue corrupto/parcial rechazado; la versión anterior sigue disponible.
-• Nueva versión esperando aceptación sin interrumpir la partida.
-• Dos ventanas usando versiones diferentes sin mezclar sus módulos.
-• Limpieza de cachés antiguas solo dentro del ámbito de esta aplicación.
-• Ningún borrado de localStorage, IndexedDB ni cachés de otras aplicaciones.
+Worker final generado usando TODOS los recursos de la copia final.
+Se comprueba inventario completo, tamaño y SHA-256 de cada recurso.
+Pruebas de Service Worker con implementaciones de Cache/Fetch simuladas:
+• Ámbito /Sky-Explorer-App/ y URLs con queries.
+• Recursos locales y entrada a ambos mundos sin acceso de red.
+• Descarga corrupta/parcial rechazada, versión anterior retenida.
+• Actualización espera aceptación; ventanas antiguas siguen con su versión.
+• Ventana nueva utiliza únicamente la versión completa nueva.
+• Limpieza limitada a cachés propias; nunca borra datos personales.
+El paquete reconstruido sobre la fuente debe ser idéntico a la copia final.
 
-PENDIENTE DE VERIFICACIÓN REAL EN IPHONE
-Añadir a pantalla de inicio, comprobar standalone y WebGPU en diagnóstico,
-completar la descarga dentro de la app instalada, cerrar y abrir en modo avión,
-y comparar la misma escena en calidad Auto. PASOS-PARA-ISAI.txt explica cómo.
-La actualización del Service Worker también debe observarse en Safari al
-publicar otra entrega completa. Sus transiciones ya están probadas en lógica.
-
-La entrega es el proyecto completo modificado. Esta relación permite separar
-lo demostrado por pruebas de lo que necesita observación en el equipo final;
-no promete 60 FPS ni equivalencia visual certificada sin esa observación.
+NO VERIFICADO FÍSICAMENTE
+No hay un iPhone físico conectado. Pendientes allí:
+• FPS sostenidos, batería, temperatura y presión real de memoria.
+• Safari/WebKit real, instalación Home Screen y caché bajo desalojo de iOS.
+• Orientación/safe areas/Dynamic Island y simultaneidad táctil real.
+• Comparación visual WebGPU/WebGL en pantalla, sin promesa de equivalencia
+  de píxel entre drivers. Ecuaciones GLSL y TSL están sincronizadas.
+• Actualización del despliegue real de GitHub Pages; se conserva su estructura
+  y worker pero no se publica nada para efectuar una prueba remota.

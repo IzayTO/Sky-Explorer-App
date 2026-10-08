@@ -18,7 +18,7 @@ float flashlightBeam(vec3 fromLamp,vec3 direction){
 // mode interpolates between off (0), dipped (1) and main beam (2).
 export const vehicleLightGLSL=`
 uniform vec3 lampLeft,lampRight,lampDirection,vehicleCenter,vehicleSize;
-uniform float lampMode,vehicleHeading,reverseLight;
+uniform float lampMode,vehicleHeading,reverseLight,shadowDetail;
 uniform vec3 rearLamp,rearDirection;
 uniform mat4 vehicleInverse;
 uniform vec4 wheelShape,wheelOffsets;
@@ -61,6 +61,7 @@ float vehicleOcclusion(vec3 p,vec3 light){
   vec3 inv=sign(d+vec3(.000001))/max(abs(d),vec3(.000001));
   float hit=boxHit(o,inv,vec3(0.,.20,0.),vec3(vehicleSize.x,.19,vehicleSize.z));
   hit=max(hit,boxHit(o,inv,vec3(0.,.73,.20),vec3(vehicleSize.x*.82,.41,.38)));
+  if(shadowDetail<.5)return mix(1.,.06,hit);
   hit=max(hit,wheelHit(o,d,vec3(-wheelShape.x,wheelOffsets.x,-wheelShape.y)));
   hit=max(hit,wheelHit(o,d,vec3(-wheelShape.x,wheelOffsets.y,wheelShape.y)));
   hit=max(hit,wheelHit(o,d,vec3(wheelShape.x,wheelOffsets.z,-wheelShape.y)));

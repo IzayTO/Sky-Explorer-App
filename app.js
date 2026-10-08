@@ -1,16 +1,17 @@
 import * as THREE from './three.module.js?v=4.0.0';
-import {createRenderer,compileScene,onGraphicsFailure,recoverGraphics,graphicsInfo} from './renderer-factory.js?v=4.0.0';
-import {Sky,clamp,smooth,phaseName} from './sky.js?v=4.0.0';
-import {Terrain} from './terrain.js?v=4.0.0';
-import {Walker,bindTimeLoop,cycleHour} from './controls.js?v=4.0.0';
-import {Ambience} from './sound.js?v=4.0.0';
-import {LunarSky,MOON_GRAVITY} from './lunar-sky.js?v=4.0.0';
-import {LunarTerrain} from './lunar-terrain.js?v=4.0.0';
-import {Vehicle} from './vehicles.js?v=4.0.0';
-import {VehicleSound} from './vehicle-sound.js?v=4.0.0';
-import {Inventory} from './inventory.js?v=4.0.0';
-import {Expedition} from './expedition.js?v=4.0.0';
-import {LunarAmbience} from './lunar-sound.js?v=4.0.0';
+import {createRenderer,compileScene,onGraphicsFailure,recoverGraphics,graphicsInfo} from './renderer-factory.js?v=4.1.0';
+import {Sky,clamp,smooth,phaseName} from './sky.js?v=4.1.0';
+import {Terrain} from './terrain.js?v=4.1.0';
+import {PerformanceSettings} from './performance-settings.js?v=4.1.0';
+import {Walker,bindTimeLoop,cycleHour} from './controls.js?v=4.1.0';
+import {Ambience} from './sound.js?v=4.1.0';
+import {LunarSky,MOON_GRAVITY} from './lunar-sky.js?v=4.1.0';
+import {LunarTerrain} from './lunar-terrain.js?v=4.1.0';
+import {Vehicle} from './vehicles.js?v=4.1.0';
+import {VehicleSound} from './vehicle-sound.js?v=4.1.0';
+import {Inventory} from './inventory.js?v=4.1.0';
+import {Expedition} from './expedition.js?v=4.1.0';
+import {LunarAmbience} from './lunar-sound.js?v=4.1.0';
 
 const $=id=>document.getElementById(id),mobile=matchMedia('(pointer:coarse)').matches,reduced=matchMedia('(prefers-reduced-motion:reduce)').matches;
 const icons={
@@ -42,8 +43,9 @@ let toastTimer;function toast(message){$('toast').textContent=message;$('toast')
 const state={inventory:false,destination:'earth',moonAppearance:'natural',headlightExposure:0,vehicleLighting:null,flashlight:false,hour:17.8,phase:.17,targetPhase:.17,playing:false,direction:1,duration:12,path:0,fov:100,speed:1,volume:.35,milky:true,sway:!reduced,quality:'auto',scope:false,zoom:0,zoomReveal:0,active:false,hiddenUI:false,panel:false};
 // Only personal preferences are local. Every fresh visit starts at sunset.
 try{const saved=JSON.parse(localStorage.getItem('a-cielo-abierto-prefs-v1')||'null');if(saved){for(const key of ['fov','speed','volume','milky','sway','quality','duration','moonAppearance'])if(saved[key]!==undefined)state[key]=saved[key];state.fov=clamp(Number(state.fov)||100,55,120);state.speed=clamp(Number(state.speed)||1,.4,4);state.volume=clamp(Number(state.volume)||0);state.duration=clamp(Number(state.duration)||12,2,60);if(!['auto','high','balanced'].includes(state.quality))state.quality='auto';}}catch{}
+const graphics=new PerformanceSettings({legacyQuality:state.quality,mobile,deviceRatio:devicePixelRatio||1,onChange:applyGraphics});state.graphics=graphics.effective;
 function save(){try{const {fov,speed,volume,milky,sway,quality,duration,moonAppearance}=state;localStorage.setItem('a-cielo-abierto-prefs-v1',JSON.stringify({fov,speed,volume,milky,sway,quality,duration,moonAppearance}));}catch{}}
-let renderer,scene,camera,sky,terrain,walker,audio,vehicle,motor,inventory,expedition,raf,frameTime=0,elapsed=0,uiTime=0,performanceFrames=0,performanceSum=0,autoScale=1,contextLost=false,phaseImageData;
+let renderer,scene,camera,sky,terrain,walker,audio,vehicle,motor,inventory,expedition,raf,frameTime=0,elapsed=0,uiTime=0,contextLost=false,phaseImageData;
 const promptPoint=new THREE.Vector3();
 let targetHour=null,phaseControlUntil=0,previewBuffer=null,lastPreviewKey='';const environments={};let switching=false;const lunarAudio=new LunarAmbience();
 const surfaceAnimations=new WeakMap();
@@ -59,16 +61,17 @@ function showSurface(el,show){
 
 function viewport(){return {w:window.innerWidth,h:window.innerHeight};}
 function targetFov(){if(!state.scope||state.zoom===0)return state.fov;const {w,h}=viewport();const levels=state.mountedScope?[0,6,1,.10]:state.destination==='moon'?[0,14,4,1.05]:[0,20,8,4.1];return levels[state.zoom]/Math.min(1,w/h);}
-function pixelRatio(){const base=Math.min(devicePixelRatio||1,mobile?1.65:2);return state.quality==='high'?Math.min(devicePixelRatio||1,2):state.quality==='balanced'?Math.min(base,1.25):base*autoScale;}
+function pixelRatio(){return graphics.effective.pixelRatio;}
+function applyGraphics(){state.graphics=graphics.effective;for(const env of Object.values(environments)){env.terrain.configureGraphics?.(state.graphics);env.world?.configureGraphics(state.graphics);}state.quality=graphics.settings.profile==='quality'?'high':graphics.settings.profile==='balanced'?'balanced':'auto';resize();save();}
 function resize(){if(!renderer)return;const {w,h}=viewport();renderer.setPixelRatio(pixelRatio());graphicsInfo.pixelRatio=pixelRatio();renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();}
 window.addEventListener('resize',resize);window.visualViewport?.addEventListener('resize',resize);
 
 async function init(){
   try{
-    renderer=await createRenderer();onGraphicsFailure(failGraphics);renderer.outputColorSpace=globalThis.__skyWebGPU?THREE.LinearSRGBColorSpace:THREE.SRGBColorSpace;renderer.toneMapping=THREE.NoToneMapping;renderer.setClearColor(0x111d25);$('world').appendChild(renderer.domElement);
+    renderer=await createRenderer();onGraphicsFailure(failGraphics);renderer.outputColorSpace=globalThis.__skyWebGPU?THREE.LinearSRGBColorSpace:THREE.SRGBColorSpace;renderer.toneMapping=THREE.NoToneMapping;if(renderer.info)renderer.info.autoReset=false;renderer.setClearColor(0x111d25);$('world').appendChild(renderer.domElement);
     scene=new THREE.Scene();camera=new THREE.PerspectiveCamera(state.fov,innerWidth/innerHeight,.08,18000);camera.coordinateSystem=globalThis.__skyWebGPU?THREE.WebGPUCoordinateSystem:THREE.WebGLCoordinateSystem;camera.updateProjectionMatrix();camera.position.set(0,1.68,0);
     const moon=await new THREE.TextureLoader().loadAsync(new URL('./moon.jpg?v=4.0.0',import.meta.url).href);moon.colorSpace=THREE.NoColorSpace;moon.anisotropy=Math.min(renderer.capabilities.getMaxAnisotropy(),4);moon.minFilter=THREE.LinearMipmapLinearFilter;
-    sky=new Sky(scene,moon);terrain=new Terrain(scene,mobile);audio=new Ambience();audio.setVolume(state.volume);
+    sky=new Sky(scene,moon);terrain=new Terrain(scene,mobile);terrain.configureGraphics(state.graphics);audio=new Ambience();audio.setVolume(state.volume);
     walker=new Walker(camera,renderer.domElement,s=>audio.step(s),()=>toast(state.destination==='moon'?'Has llegado al límite de exploración. Sigue en otra dirección.':'Has llegado al límite de la pradera. Puedes seguir en otra dirección.'));walker.bindJoystick($('joystick'),$('joy-thumb'));walker.sway=state.sway;walker.speed=state.speed;
     walker.onJump=()=>{if(!vehicle?.mounted)audio.jump();};walker.onLand=impact=>vehicle?.mounted?motor.land(impact):audio.land(impact);
     vehicle=new Vehicle(scene);motor=new VehicleSound(audio);state.vehicleLighting=vehicle.lighting;environments.earth={scene,sky,terrain,audio,vehicle,motor,preview:moon.image,saved:null};
@@ -77,7 +80,7 @@ async function init(){
     graphicsInfo.ready=true;$('enter').disabled=false;$('enter-label').textContent='Explorar';$('moon-destination').disabled=false;$('moon-enter-label').textContent='Explorar';
     renderer.domElement.addEventListener('webglcontextlost',e=>{e.preventDefault();contextLost=true;cancelAnimationFrame(raf);walker.resetInput();audio.pause();toast('Recuperando el paisaje…');});
     renderer.domElement.addEventListener('webglcontextrestored',()=>{contextLost=false;for(const env of Object.values(environments))env.terrain.lightCache?.invalidate();frameTime=0;if(state.active)audio.start();raf=requestAnimationFrame(frame);});
-    document.addEventListener('visibilitychange',()=>{if(document.hidden){cancelAnimationFrame(raf);walker.resetInput();audio.pause();frameTime=0;}else if(!contextLost){if(state.active)audio.start();raf=requestAnimationFrame(frame);}});
+    document.addEventListener('visibilitychange',()=>{if(document.hidden){graphics.resetSamples();cancelAnimationFrame(raf);walker.resetInput();audio.pause();frameTime=0;}else if(!contextLost){if(state.active)audio.start();raf=requestAnimationFrame(frame);}});
     raf=requestAnimationFrame(frame);
   }catch(e){if(failGraphics(e))return;console.error(e);$('loading-error').hidden=false;$('loading-error').textContent=/WebGL/i.test(e.message)?'Este navegador no pudo iniciar los gráficos 3D. Prueba abrir la página en Safari o Chrome con la aceleración gráfica disponible.':'No se pudo abrir el paisaje. Comprueba que subiste todos los archivos juntos y abre la dirección de GitHub Pages en Safari o Chrome actualizado.';$('enter-label').textContent='No disponible';}
 }
@@ -86,7 +89,7 @@ async function prepareMoon(){
   const loader=new THREE.TextureLoader();
   const [earth,height,regolith]=await Promise.all(['earth.jpg','lunar-height.png','regolith.jpg'].map(name=>loader.loadAsync(new URL('./'+name+'?v=4.0.0',import.meta.url).href)));
   earth.colorSpace=THREE.NoColorSpace;earth.anisotropy=Math.min(renderer.capabilities.getMaxAnisotropy(),8);earth.wrapS=THREE.RepeatWrapping;
-  const lunarScene=new THREE.Scene(),lunarSky=new LunarSky(lunarScene,environments.earth.sky,earth),lunarTerrain=new LunarTerrain(lunarScene,height,regolith,mobile);lunarSky.terrain=lunarTerrain;
+  const lunarScene=new THREE.Scene(),lunarSky=new LunarSky(lunarScene,environments.earth.sky,earth),lunarTerrain=new LunarTerrain(lunarScene,height,regolith,mobile);lunarSky.terrain=lunarTerrain;lunarTerrain.configureGraphics(state.graphics);
   const lunarVehicle=new Vehicle(lunarScene,{lunar:true,heightAt:(x,z)=>lunarTerrain.heightAt(x,z),terrain:lunarTerrain});
   return environments.moon={motor:new VehicleSound(lunarAudio,true),vehicle:lunarVehicle,scene:lunarScene,sky:lunarSky,terrain:lunarTerrain,audio:lunarAudio,preview:earth.image,saved:{hour:8.6,phase:.25,targetPhase:.25,path:0,pos:null,yaw:-1.8,pitch:.23}};
 }
@@ -166,7 +169,7 @@ function updateVehiclePrompt(){
   button.hidden=!visible;
 }
 function setInventory(open){
-  if(open&&(!state.active||state.hiddenUI))return;
+  if(open&&(!state.active||state.hiddenUI))return;if(open&&state.scope)setScope(false);
   if(open&&state.panel)setPanel(false,false);
   if(state.expeditionPanel)expedition.closeDialog();if(!open){inventory.cancel();inventory.context.hidden=true;}
   state.inventory=open;$('inventory-overlay').hidden=!open;document.body.classList.toggle('inventory-open',open);
@@ -212,8 +215,8 @@ function bindUI(){
   document.querySelectorAll('[data-moon-look]').forEach(b=>b.addEventListener('click',()=>{state.moonAppearance=b.dataset.moonLook;document.querySelectorAll('[data-moon-look]').forEach(el=>el.setAttribute('aria-pressed',el===b));save();}));
  $('flashlight-setting').addEventListener('change',e=>setFlashlight(e.target.checked));
   $('settings-button').addEventListener('click',()=>setPanel(!state.panel));$('close-settings').addEventListener('click',()=>setPanel(false));
-  const tabs=[$('sky-tab'),$('walk-tab')];tabs.forEach((tab,index)=>{tab.addEventListener('click',()=>activateTab(index));tab.addEventListener('keydown',e=>{if(['ArrowLeft','ArrowRight','Home','End'].includes(e.key)){e.preventDefault();activateTab(e.key==='Home'?0:e.key==='End'?1:1-index,true);}});});
-  function activateTab(index,focus=false){tabs.forEach((tab,i)=>{tab.setAttribute('aria-selected',i===index);tab.tabIndex=i===index?0:-1;$(tab.getAttribute('aria-controls')).hidden=i!==index;});if(focus)tabs[index].focus();}
+  const tabs=[$('sky-tab'),$('walk-tab'),$('performance-tab')];tabs.forEach((tab,index)=>{tab.addEventListener('click',()=>activateTab(index));tab.addEventListener('keydown',e=>{if(['ArrowLeft','ArrowRight','Home','End'].includes(e.key)){e.preventDefault();activateTab(e.key==='Home'?0:e.key==='End'?tabs.length-1:(index+(e.key==='ArrowRight'?1:tabs.length-1))%tabs.length,true);}});});
+  function activateTab(index,focus=false){tabs.forEach((tab,i)=>{tab.setAttribute('aria-selected',i===index);tab.tabIndex=i===index?0:-1;$(tab.getAttribute('aria-controls')).hidden=i!==index;});if(focus)tabs[index].focus();$('settings').scrollTop=0;}
   bindTimeLoop($('time'),hour=>{state.hour=hour;state.playing=false;targetHour=null;updateReadouts();});
   $('play').addEventListener('click',()=>{state.playing=!state.playing;targetHour=null;updateReadouts();});
   $('cycle-direction').addEventListener('click',()=>{state.direction*=-1;icon($('cycle-direction'),state.direction===1?'forward':'backward');toast(state.direction===1?'El tiempo avanza.':'El tiempo retrocede.');});
@@ -227,7 +230,7 @@ function bindUI(){
   $('speed').addEventListener('input',e=>{state.speed=Number(e.target.value);walker.speed=state.speed;$('speed-value').textContent=state.speed.toFixed(1)+'×';save();});
   $('volume').addEventListener('input',e=>{state.volume=Number(e.target.value)/100;audio.setVolume(state.volume);$('volume-value').textContent=Math.round(state.volume*100)+' %';save();});
   $('sway').addEventListener('change',e=>{state.sway=e.target.checked;walker.sway=state.sway;save();});
-  $('quality').addEventListener('change',e=>{state.quality=e.target.value;autoScale=1;resize();save();});
+  graphics.bind($('performance-settings'));
   $('sound-button').addEventListener('click',()=>{audio.setMuted(!audio.muted);icon($('sound-button'),audio.muted?'mute':'volume');$('sound-button').setAttribute('aria-pressed',!audio.muted);$('sound-button').setAttribute('aria-label',audio.muted?'Activar ambiente':'Silenciar ambiente');if(!audio.muted)audio.start();});
   $('reset-position').addEventListener('click',()=>{expedition.exitSeat();leaveVehicle(true);vehicle.parkAt(state.destination==='moon'?-8:-7,state.destination==='moon'?1.8:-2);walker.resetPosition();toast(state.destination==='moon'?'De nuevo en el punto de llegada.':'De nuevo en el centro de la pradera.');});
   $('scope-button').addEventListener('click',()=>setScope(!state.scope));document.querySelectorAll('[data-zoom]').forEach(b=>b.addEventListener('click',()=>setZoom(Number(b.dataset.zoom))));
@@ -258,9 +261,9 @@ function bindUI(){
 }
 function setPanel(open,focus=true){if(open&&state.inventory)setInventory(false);state.panel=open;showSurface($('settings'),open);$('settings-button').setAttribute('aria-expanded',open);document.body.classList.toggle('panel-open',open);walker.enabled=state.active&&!open&&!state.inventory;walker.resetInput();if(open){if(document.pointerLockElement)document.exitPointerLock();if(focus)$('close-settings').focus();}else if(focus)$('settings-button').focus();}
 function hideUI(hidden){state.hiddenUI=hidden;if(hidden){if(state.inventory)setInventory(false);setPanel(false,false);}document.body.classList.toggle('ui-hidden',hidden);$('hud').inert=hidden;$('show-ui').hidden=!hidden;if(hidden)$('show-ui').focus();else $('world').focus({preventScroll:true});}
-function setScope(on){if(!on&&state.mountedScope){expedition.exitSeat();return;}state.scope=on;document.body.classList.toggle('using-scope',on);$('lens').classList.toggle('active',on);showSurface($('scope-controls'),on);$('scope-button').setAttribute('aria-pressed',on);$('scope-button').setAttribute('aria-label',on?'Guardar telescopio':'Usar telescopio');$('scope-label').textContent=on?'Guardar':'Telescopio';$('fov').disabled=on;$('fov-note').textContent=on?'Guarda el telescopio para cambiar el campo de visión.':'Se ajusta con el telescopio guardado.';if(on)walker.resetInput();}
+function setScope(on){if(!on&&state.mountedScope){expedition.exitSeat();return;}if(on)expedition?.cancelBuild();state.scope=on;document.body.classList.toggle('using-scope',on);$('lens').classList.toggle('active',on);showSurface($('scope-controls'),on);$('scope-button').setAttribute('aria-pressed',on);$('scope-button').setAttribute('aria-label',on?'Guardar telescopio':'Usar telescopio');$('scope-label').textContent=on?'Guardar':'Telescopio';$('fov').disabled=on;$('fov-note').textContent=on?'Guarda el telescopio para cambiar el campo de visión.':'Se ajusta con el telescopio guardado.';if(on)walker.resetInput();}
 function setZoom(level){state.zoom=level;document.querySelectorAll('[data-zoom]').forEach(b=>b.setAttribute('aria-pressed',Number(b.dataset.zoom)===level));}
-function syncPreferences(){document.querySelectorAll('[data-moon-look]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.moonLook===state.moonAppearance));for(const id of ['fov','speed','duration','quality'])$(id).value=state[id];$('volume').value=Math.round(state.volume*100);$('milky').checked=state.milky;$('sway').checked=state.sway;$('fov-value').textContent=state.fov+'°';$('speed-value').textContent=state.speed.toFixed(1)+'×';$('volume-value').textContent=Math.round(state.volume*100)+' %';$('duration-value').textContent=state.duration+' min';if(mobile)$('device-hint').textContent='Joystick para caminar · Arrastra para mirar';}
+function syncPreferences(){document.querySelectorAll('[data-moon-look]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.moonLook===state.moonAppearance));for(const id of ['fov','speed','duration'])$(id).value=state[id];$('volume').value=Math.round(state.volume*100);$('milky').checked=state.milky;$('sway').checked=state.sway;$('fov-value').textContent=state.fov+'°';$('speed-value').textContent=state.speed.toFixed(1)+'×';$('volume-value').textContent=Math.round(state.volume*100)+' %';$('duration-value').textContent=state.duration+' min';if(mobile)$('device-hint').textContent='Joystick para caminar · Arrastra para mirar';}
 function updateReadouts(){
   const h=state.hour%24,m=Math.floor(h*60),time=`${String(Math.floor(m/60)).padStart(2,'0')}:${String(m%60).padStart(2,'0')}`;
   $('clock').textContent=time;$('time').value=state.hour;$('time').setAttribute('aria-valuetext',time);
@@ -299,11 +302,10 @@ function renderFrame(now){
   walker.sensitivity=state.scope?Math.max(.008,Math.tan(camera.fov*Math.PI/360)/Math.tan(state.fov*Math.PI/360)):1;expedition.beforeMotion();walker.update(dt);expedition.afterMotion();
   if(!vehicle.mounted){vehicle.integrate(dt,0,0,state.active&&!state.panel&&!state.inventory);if(!walker.driver)vehicle.collideWalker(walker);if(!walker.driver){camera.position.x=walker.pos.x;camera.position.z=walker.pos.z;}}
   vehicle.updateLighting(dt);state.headlightExposure=Math.max(vehicle.exposure(camera),environments[state.destination].world.lights.exposure(camera));
-  sky.update(camera,state,elapsed,pixelRatio());expedition.update(elapsed,dt,pixelRatio());terrain.prepareLighting?.(renderer,camera,sky);terrain.update(camera,sky,elapsed,state);vehicle.updateAppearance(sky,camera,state,dt);audio.update(elapsed,sky.night,state.hour);motor.update(vehicle);updateVehiclePrompt();renderer.render(scene,camera);expedition?.renderOverlay();
+  renderer.info?.reset?.();sky.update(camera,state,elapsed,pixelRatio());expedition.update(elapsed,dt,pixelRatio());terrain.prepareLighting?.(renderer,camera,sky);terrain.update(camera,sky,elapsed,state);vehicle.updateAppearance(sky,camera,state,dt);audio.update(elapsed,sky.night,state.hour);motor.update(vehicle);updateVehiclePrompt();renderer.render(scene,camera);expedition?.renderOverlay();
   uiTime+=dt;if(uiTime>.12){uiTime=0;updateReadouts();updateVehicleUI();}
-  // Reduce only pixel density under sustained pressure. Sky layers, lunar map,
-  // star catalogue and grass geometry remain intact; never degrade from one spike.
-  if(state.active&&state.quality==='auto'&&raw<.2){performanceSum+=raw;performanceFrames++;if(performanceFrames===240){const avg=performanceSum/performanceFrames;graphicsInfo.averageFrameMs=Math.round(avg*10000)/10;graphicsInfo.pixelRatio=pixelRatio();graphicsInfo.drawCalls=renderer.info?.render?.calls??renderer.info?.render?.drawCalls??null;performanceSum=0;performanceFrames=0;if(avg>.022&&autoScale>.76){autoScale=Math.max(.76,autoScale-.04);resize();}else if(avg<.017&&autoScale<1){autoScale=Math.min(1,autoScale+.04);resize();}}}
+  graphics.sample(raw,state.active);graphics.updateHUD(now,renderer,graphicsInfo);
+
 }
 window.addEventListener('sky-before-update',()=>{save();inventory?.save();expedition?.science.save();for(const env of Object.values(environments))env.world?.save();});
 function registerSkyTools(){

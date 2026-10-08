@@ -1,6 +1,6 @@
-import {createStarField} from './star-field.js?v=4.0.0';
+import {createStarField} from './star-field.js?v=4.1.0';
 import * as THREE from './three.module.js?v=4.0.0';
-import {clamp,smooth} from './sky.js?v=4.0.0';
+import {clamp,smooth} from './sky.js?v=4.1.0';
 const TAU=Math.PI*2,UP=new THREE.Vector3(0,1,0);
 export const LUNAR_DAY=29.53059,MOON_GRAVITY=1.62;
 const eq=(ra,de)=>new THREE.Vector3(Math.cos(de*Math.PI/180)*Math.cos(ra*Math.PI/180),Math.sin(de*Math.PI/180),Math.cos(de*Math.PI/180)*Math.sin(ra*Math.PI/180));
@@ -19,10 +19,10 @@ export class LunarSky{
     this.u=THREE.UniformsUtils.clone(base.u);this.u.sunDirection.value=this.sun;this.u.moonDirection.value=this.moon;this.u.field.value=this.field;this.u.moonMap.value=earthTexture;
     Object.assign(this.u,{earthLight:{value:new THREE.Vector3()},earthSpin:{value:0},solarVisible:{value:1},solarGlare:{value:0},adaptation:{value:0},earthIllumination:{value:.5}});
     const copy=(original,fragment,additive=false)=>{const material=original.material.clone();material.uniforms=this.u;if(fragment)material.fragmentShader=fragment;material.blending=additive?THREE.AdditiveBlending:THREE.NormalBlending;const m=new THREE.Mesh(original.geometry,material);m.frustumCulled=false;m.renderOrder=original.renderOrder;scene.add(m);return m;};
-    this.atmosphere=copy(base.atmosphere,`varying vec3 vRay;uniform vec3 sunDirection;uniform float solarVisible,solarGlare;
+      this.atmosphere=copy(base.atmosphere,`varying vec3 vRay;uniform vec3 sunDirection;uniform float solarVisible,solarGlare;
       void main(){vec3 d=normalize(vRay);float a=atan(length(cross(d,sunDirection)),dot(d,sunDirection));float aa=max(fwidth(a),.000018);
         float disk=1.-smoothstep(.0285-aa,.035+aa,a);
-        float glow=exp(-pow(a/.19,1.65))*.20+exp(-a*20.)*.55+exp(-a*65.)*.45;
+        float glow=0.;if(solarGlare>.000001)glow=exp(-pow(a/.19,1.65))*.20+exp(-a*20.)*.55+exp(-a*65.)*.45;
         vec3 color=vec3(1.,.985,.95)*(disk*2.2+glow*solarGlare);
         gl_FragColor=vec4(color,1.);}`);
     let mw=base.milkyWay.material.fragmentShader.replace('*(1.-moonlight*.82)*smoothstep(.0,.23,d.y)','').replace('color*dust*veil','color*dust*veil*3.35');
@@ -73,6 +73,7 @@ export class LunarSky{
     this.moon.set(-Math.sin(lon),Math.cos(latitude)*Math.cos(lon),Math.sin(latitude)*Math.cos(lon)).normalize();
   }
   update(camera,state,t,pixelRatio){
+    this.u.skyDetail.value=state.graphics?.advancedSky===false?0:1;
     this.orbit(state.hour);const dt=clamp(t-this.lastTime,0,.05)||.016;this.lastTime=t;
     this.right.crossVectors(this.moon,UP).normalize();this.up.crossVectors(this.right,this.moon).normalize();
     const light=this.u.earthLight.value;light.set(this.sun.dot(this.right),this.sun.dot(this.up),-this.sun.dot(this.moon));
@@ -83,7 +84,7 @@ export class LunarSky{
     const visibility=(dir,radius)=>{const v=this.viewDirection.copy(dir).transformDirection(camera.matrixWorldInverse);if(v.z>=0)return 0;const scale=-v.z*vertical,x=Math.max(0,Math.abs(v.x)-radius)/(scale*camera.aspect),y=Math.max(0,Math.abs(v.y)-radius)/scale;return 1-smooth(.7,1.22,Math.max(x,y));};
     const sunSight=this.terrain?.visibleFrom(camera.position,this.sun)??1;const solar=visibility(this.sun,.033)*sunSight;
     const earthSight=this.terrain?.visibleFrom(camera.position,this.moon)??1;const planet=visibility(this.moon,.078)*this.illumination*earthSight;
-    this.solarGlare+=(solar-this.solarGlare)*(1-Math.exp(-dt*14));this.u.solarGlare.value=this.solarGlare;
+    this.solarGlare+=(solar-this.solarGlare)*(1-Math.exp(-dt*14));this.u.solarGlare.value=state.graphics?.advancedSky===false?0:this.solarGlare;
     const groundFraction=clamp(.5-Math.asin(clamp(this.forward.y,-1,1))/(camera.fov*Math.PI/180));
     const skyFraction=1-groundFraction,litGround=smooth(-.025,.08,this.sun.y)*smooth(.015,.29,groundFraction);
     // About 99% of dark recovery in one second; faster glare suppression.

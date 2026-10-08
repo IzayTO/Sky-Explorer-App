@@ -1,7 +1,7 @@
 // Generated from the project's exact GLSL equations with Three.js r186 GLSLDecoder/TSLEncoder.
 // Build-time only: no shader transpiler is downloaded or executed on iPhone.
-import {vec4,float,mat3,Fn,max,pow,vec3,mix,length,dot,clamp,exp,mul,add,sub,smoothstep,cross,atan,fwidth,If,normalize,vec2,fract,varying,floor,sin,select,time,attribute,Discard,sqrt,asin,cos,min,step,sign,abs,mod,div,Continue,Loop,Break,mat2,modelViewMatrix,uv,distance,dFdx,dFdy,cameraProjectionMatrix,cameraViewMatrix,modelWorldMatrix,modelViewMatrix as modelViewMatrixNode,viewportSize,screenCoordinate} from './three.tsl.js?v=4.0.0';
-// 0: earth-world-Mesh
+import {vec4,float,mat3,Fn,max,pow,vec3,mix,length,dot,clamp,exp,mul,add,sub,smoothstep,cross,atan,fwidth,If,normalize,vec2,fract,varying,floor,sin,select,time,attribute,Discard,sqrt,asin,cos,min,step,sign,abs,mod,div,bool,Continue,Loop,Break,mat2,modelViewMatrix,uv,distance,dFdx,dFdy,cameraProjectionMatrix,cameraViewMatrix,modelWorldMatrix,modelViewMatrix as modelViewMatrixNode,viewportSize,screenCoordinate} from './three.tsl.js?v=4.0.0';
+// 0: earth Mesh
 export function material_52462404(bind){
 const position=attribute('position','vec3'),normal=attribute('normal','vec3'),uv=attribute('uv','vec2');
 const projectionMatrix=cameraProjectionMatrix,viewMatrix=cameraViewMatrix,modelMatrix=modelWorldMatrix,modelViewMatrix=modelViewMatrixNode;
@@ -16,7 +16,10 @@ const night=bind("night","float",0);
 const moonlight=bind("moonlight","float",0);
 const sunset=bind("sunset","float",0);
 const vRay=varying(vec3(),"sky_vRay");
-const vertex=(()=>{// Three.js Transpiler r186
+const vertex=Fn(()=>{
+inverseProjection.toStack();
+cameraWorld.toStack();
+return (()=>{// Three.js Transpiler r186
 
 
 
@@ -33,7 +36,15 @@ const skyVertex = /*@__PURE__*/ Fn( () => {
 } );
 
 return skyVertex();})();
-const fragment=(()=>{// Three.js Transpiler r186
+})();
+const fragment=Fn(()=>{
+sunDirection.toStack();
+moonDirection.toStack();
+day.toStack();
+twilight.toStack();
+moonlight.toStack();
+sunset.toStack();
+return (()=>{// Three.js Transpiler r186
 
 
 
@@ -94,10 +105,11 @@ const skyFragment = /*@__PURE__*/ Fn( ( [ vRay, skyPixel, skyPointUV ] ) => {
 }, { vRay: 'vec3', skyPixel: 'vec3', skyPointUV: 'vec2', return: 'vec4' } );
 
 return skyFragment(vRay,skyPixel,skyPointUV);})();
+})();
 return {vertex,fragment};
 }
-// 1: earth-world-Mesh
-export function material_83a4c76f(bind){
+// 1: earth Mesh
+export function material_cf34c1a(bind){
 const position=attribute('position','vec3'),normal=attribute('normal','vec3'),uv=attribute('uv','vec2');
 const projectionMatrix=cameraProjectionMatrix,viewMatrix=cameraViewMatrix,modelMatrix=modelWorldMatrix,modelViewMatrix=modelViewMatrixNode;
 const skyViewport=viewportSize,quadCorner=attribute('quadCorner','vec2'),skyPointUV=vec2(0),skyPixel=vec3(screenCoordinate.x,viewportSize.y.sub(screenCoordinate.y),0);
@@ -109,8 +121,12 @@ const galacticTangent=bind("galacticTangent","vec3",0);
 const night=bind("night","float",0);
 const moonlight=bind("moonlight","float",0);
 const milkyOn=bind("milkyOn","float",0);
+const skyDetail=bind("skyDetail","float",0);
 const vRay=varying(vec3(),"sky_vRay");
-const vertex=(()=>{// Three.js Transpiler r186
+const vertex=Fn(()=>{
+inverseProjection.toStack();
+cameraWorld.toStack();
+return (()=>{// Three.js Transpiler r186
 
 
 
@@ -127,7 +143,16 @@ const skyVertex = /*@__PURE__*/ Fn( () => {
 } );
 
 return skyVertex();})();
-const fragment=(()=>{// Three.js Transpiler r186
+})();
+const fragment=Fn(()=>{
+galacticNormal.toStack();
+galacticCenter.toStack();
+galacticTangent.toStack();
+night.toStack();
+moonlight.toStack();
+milkyOn.toStack();
+skyDetail.toStack();
+return (()=>{// Three.js Transpiler r186
 
 
 
@@ -153,7 +178,15 @@ const noise3 = /*@__PURE__*/ Fn( ( [ p ] ) => {
 
 const fbm = /*@__PURE__*/ Fn( ( [ p ] ) => {
 
-	return mul( .52, noise3( p ) ).add( mul( .27, noise3( p.mul( 2.07 ).add( 4.3 ) ) ) ).add( mul( .14, noise3( p.mul( 4.13 ).add( 12.7 ) ) ) ).add( mul( .07, noise3( p.mul( 8.19 ) ) ) );
+	const clouds = mul( .52, noise3( p ) ).add( mul( .27, noise3( p.mul( 2.07 ).add( 4.3 ) ) ) ).toVar();
+
+	If( skyDetail.greaterThan( .5 ), () => {
+
+		clouds.addAssign( mul( .14, noise3( p.mul( 4.13 ).add( 12.7 ) ) ).add( mul( .07, noise3( p.mul( 8.19 ) ) ) ) );
+
+	} );
+
+	return clouds;
 
 }, { p: 'vec3', return: 'float' } );
 
@@ -164,8 +197,16 @@ const skyFragment = /*@__PURE__*/ Fn( ( [ vRay, skyPixel, skyPointUV ] ) => {
 	const lat = dot( d, galacticNormal ).toVar();
 	const g = vec3( dot( d, galacticCenter ), lat, dot( d, galacticTangent ) ).toVar();
 	const clouds = fbm( g.mul( vec3( 8., 17., 10. ) ).add( vec3( 3.1, 7.4, 1.2 ) ) ).toVar();
-	const knots = noise3( g.mul( 32. ).add( vec3( 9.2, 1.8, 4. ) ) ).toVar();
-	const fine = noise3( g.mul( 83. ).add( vec3( 4.7, 12., 6. ) ) ).toVar();
+	const knots = float( .5 ).toVar();
+	const fine = float( .5 ).toVar();
+
+	If( skyDetail.greaterThan( .5 ), () => {
+
+		knots.assign( noise3( g.mul( 32. ).add( vec3( 9.2, 1.8, 4. ) ) ) );
+		fine.assign( noise3( g.mul( 83. ).add( vec3( 4.7, 12., 6. ) ) ) );
+
+	} );
+
 	const central = pow( max( 0., g.x ), 6. ).toVar();
 	const arm = add( .40, mul( .36, noise3( vec3( g.x.mul( 4. ), g.z.mul( 4. ), 2.8 ) ) ) ).add( mul( .38, central ) ).toVar();
 	const bend = mul( .022, sin( g.z.mul( 5. ).add( g.x.mul( 2. ) ) ) ).add( clouds.sub( .5 ).mul( .065 ) ).toVar();
@@ -187,9 +228,10 @@ const skyFragment = /*@__PURE__*/ Fn( ( [ vRay, skyPixel, skyPointUV ] ) => {
 }, { vRay: 'vec3', skyPixel: 'vec3', skyPointUV: 'vec2', return: 'vec4' } );
 
 return skyFragment(vRay,skyPixel,skyPointUV);})();
+})();
 return {vertex,fragment};
 }
-// 2: earth-world-Points
+// 2: earth Points
 export function material_c8c01696(bind){
 const position=attribute('position','vec3'),normal=attribute('normal','vec3'),uv=attribute('uv','vec2');
 const projectionMatrix=cameraProjectionMatrix,viewMatrix=cameraViewMatrix,modelMatrix=modelWorldMatrix,modelViewMatrix=modelViewMatrixNode;
@@ -207,7 +249,15 @@ const vAlpha=varying(float(),"sky_vAlpha");
 const magnitude=attribute("magnitude","float");
 const seed=attribute("seed","float");
 const starColor=attribute("starColor","vec3");
-const vertex=(()=>{// Three.js Transpiler r186
+const vertex=Fn(()=>{
+field.toStack();
+sunDirection.toStack();
+moonlight.toStack();
+starLimit.toStack();
+pixelRatio.toStack();
+time.toStack();
+zoomReveal.toStack();
+return (()=>{// Three.js Transpiler r186
 
 
 
@@ -238,7 +288,10 @@ const skyVertex = /*@__PURE__*/ Fn( () => {
 } );
 
 return skyVertex();})();
-const fragment=(()=>{// Three.js Transpiler r186
+})();
+const fragment=Fn(()=>{
+
+return (()=>{// Three.js Transpiler r186
 
 
 
@@ -255,9 +308,10 @@ const skyFragment = /*@__PURE__*/ Fn( ( [ vColor, vAlpha, skyPixel, skyPointUV ]
 }, { vColor: 'vec3', vAlpha: 'float', skyPixel: 'vec3', skyPointUV: 'vec2', return: 'vec4' } );
 
 return skyFragment(vColor,vAlpha,skyPixel,skyPointUV);})();
+})();
 return {vertex,fragment};
 }
-// 3: earth-world-Mesh
+// 3: earth Mesh
 export function material_5f7f167(bind){
 const position=attribute('position','vec3'),normal=attribute('normal','vec3'),uv=attribute('uv','vec2');
 const projectionMatrix=cameraProjectionMatrix,viewMatrix=cameraViewMatrix,modelMatrix=modelWorldMatrix,modelViewMatrix=modelViewMatrixNode;
@@ -275,7 +329,10 @@ const night=bind("night","float",0);
 const moonlight=bind("moonlight","float",0);
 const sunset=bind("sunset","float",0);
 const vRay=varying(vec3(),"sky_vRay");
-const vertex=(()=>{// Three.js Transpiler r186
+const vertex=Fn(()=>{
+inverseProjection.toStack();
+cameraWorld.toStack();
+return (()=>{// Three.js Transpiler r186
 
 
 
@@ -292,7 +349,18 @@ const skyVertex = /*@__PURE__*/ Fn( () => {
 } );
 
 return skyVertex();})();
-const fragment=(()=>{// Three.js Transpiler r186
+})();
+const fragment=Fn(()=>{
+moonMap.sample( vec2(0) ).toStack();
+phase.toStack();
+moonNatural.toStack();
+sunDirection.toStack();
+moonDirection.toStack();
+day.toStack();
+twilight.toStack();
+moonlight.toStack();
+sunset.toStack();
+return (()=>{// Three.js Transpiler r186
 
 
 
@@ -405,10 +473,11 @@ const skyFragment = /*@__PURE__*/ Fn( ( [ vRay, skyPixel, skyPointUV ] ) => {
 }, { vRay: 'vec3', skyPixel: 'vec3', skyPointUV: 'vec2', return: 'vec4' } );
 
 return skyFragment(vRay,skyPixel,skyPointUV);})();
+})();
 return {vertex,fragment};
 }
-// 4: earth-world-Mesh
-export function material_5f83a42(bind){
+// 4: earth Mesh
+export function material_c9168ec9(bind){
 const position=attribute('position','vec3'),normal=attribute('normal','vec3'),uv=attribute('uv','vec2');
 const projectionMatrix=cameraProjectionMatrix,viewMatrix=cameraViewMatrix,modelMatrix=modelWorldMatrix,modelViewMatrix=modelViewMatrixNode;
 const skyViewport=viewportSize,quadCorner=attribute('quadCorner','vec2'),skyPointUV=vec2(0),skyPixel=vec3(screenCoordinate.x,viewportSize.y.sub(screenCoordinate.y),0);
@@ -428,6 +497,7 @@ const vehicleSize=bind("vehicleSize","vec3",0);
 const lampMode=bind("lampMode","float",0);
 const vehicleHeading=bind("vehicleHeading","float",0);
 const reverseLight=bind("reverseLight","float",0);
+const shadowDetail=bind("shadowDetail","float",0);
 const rearLamp=bind("rearLamp","vec3",0);
 const rearDirection=bind("rearDirection","vec3",0);
 const vehicleInverse=bind("vehicleInverse","mat4",0);
@@ -440,7 +510,9 @@ const baseNodeCount=bind("baseNodeCount","int",0);
 const baseTree=bind("baseTree","sampler2D",0);
 const baseTreeSize=bind("baseTreeSize","vec2",0);
 const vWorld=varying(vec3(),"sky_vWorld");
-const vertex=(()=>{// Three.js Transpiler r186
+const vertex=Fn(()=>{
+
+return (()=>{// Three.js Transpiler r186
 
 
 
@@ -456,7 +528,35 @@ const skyVertex = /*@__PURE__*/ Fn( () => {
 } );
 
 return skyVertex();})();
-const fragment=(()=>{// Three.js Transpiler r186
+})();
+const fragment=Fn(()=>{
+daylight.toStack();
+twilight.toStack();
+moonlight.toStack();
+torch.toStack();
+sunDirection.toStack();
+eye.toStack();
+forward.toStack();
+lampLeft.toStack();
+lampRight.toStack();
+lampDirection.toStack();
+vehicleCenter.toStack();
+vehicleSize.toStack();
+lampMode.toStack();
+reverseLight.toStack();
+shadowDetail.toStack();
+rearLamp.toStack();
+rearDirection.toStack();
+vehicleInverse.toStack();
+wheelShape.toStack();
+wheelOffsets.toStack();
+baseLights.element(0).toStack();
+baseColors.element(0).toStack();
+baseLightCount.toStack();
+baseNodeCount.toStack();
+baseTree.sample( vec2(0) ).toStack();
+baseTreeSize.toStack();
+return (()=>{// Three.js Transpiler r186
 
 
 
@@ -577,6 +677,13 @@ const vehicleOcclusion = /*@__PURE__*/ Fn( ( [ p, light ] ) => {
 	const inv = sign( d.add( vec3( .000001 ) ) ).div( max( abs( d ), vec3( .000001 ) ) ).toVar();
 	const hit = boxHit( o, inv, vec3( 0., .20, 0. ), vec3( vehicleSize.x, .19, vehicleSize.z ) ).toVar();
 	hit.assign( max( hit, boxHit( o, inv, vec3( 0., .73, .20 ), vec3( vehicleSize.x.mul( .82 ), .41, .38 ) ) ) );
+
+	If( shadowDetail.lessThan( .5 ), () => {
+
+		return mix( 1., .06, hit );
+
+	} );
+
 	hit.assign( max( hit, wheelHit( o, d, vec3( wheelShape.x.negate(), wheelOffsets.x, wheelShape.y.negate() ) ) ) );
 	hit.assign( max( hit, wheelHit( o, d, vec3( wheelShape.x.negate(), wheelOffsets.y, wheelShape.y ) ) ) );
 	hit.assign( max( hit, wheelHit( o, d, vec3( wheelShape.x, wheelOffsets.z, wheelShape.y.negate() ) ) ) );
@@ -612,6 +719,52 @@ const baseInverse = /*@__PURE__*/ Fn( ( [ d ] ) => {
 	return div( 1., mix( vec3( - 1. ), vec3( 1. ), step( vec3( 0. ), d ) ).mul( max( abs( d ), vec3( .000001 ) ) ) );
 
 }, { d: 'vec3', return: 'vec3' } );
+
+const dishRoot = /*@__PURE__*/ Fn( ( [ p, d, t, radius, limit ] ) => {
+
+	const q = p.xy.add( d.xy.mul( t ) ).toVar();
+
+	return t.greaterThan( .004 ).and( t.lessThan( limit ) ).and( dot( q, q ).lessThanEqual( radius.mul( radius ) ) );
+
+}, { p: 'vec3', d: 'vec3', t: 'float', radius: 'float', limit: 'float', return: 'bool' } );
+
+const dishSurface = /*@__PURE__*/ Fn( ( [ p, d, radius, curve, depth, limit ] ) => {
+
+	const a = curve.mul( dot( d.xy, d.xy ) ).toVar();
+	const b = d.z.add( mul( 2., curve ).mul( dot( p.xy, d.xy ) ) ).toVar();
+	const c = p.z.add( curve.mul( dot( p.xy, p.xy ) ) ).sub( depth ).toVar();
+	const hit = bool( false ).toVar();
+
+	If( abs( a ).lessThan( .0000001 ), () => {
+
+		If( abs( b ).greaterThanEqual( .0000001 ), () => {
+
+			hit.assign( dishRoot( p, d, c.negate().div( b ), radius, limit ) );
+
+		} );
+
+	} ).Else( () => {
+
+		const h = b.mul( b ).sub( mul( 4., a ).mul( c ) ).toVar();
+
+		If( h.greaterThanEqual( 0. ), () => {
+
+			const root = sqrt( h ).toVar();
+			hit.assign( dishRoot( p, d, b.negate().sub( root ).div( mul( 2., a ) ), radius, limit ).or( dishRoot( p, d, b.negate().add( root ).div( mul( 2., a ) ), radius, limit ) ) );
+
+		} );
+
+	} );
+
+	return hit;
+
+}, { p: 'vec3', d: 'vec3', radius: 'float', curve: 'float', depth: 'float', limit: 'float', return: 'bool' } );
+
+const dishHit = /*@__PURE__*/ Fn( ( [ p, d, shape, limit ] ) => {
+
+	return dishSurface( p, d, shape.x, shape.y, 0., limit ).or( dishSurface( p, d, shape.x, shape.y, shape.z, limit ) );
+
+}, { p: 'vec3', d: 'vec3', shape: 'vec3', limit: 'float', return: 'bool' } );
 
 const baseVisibility = /*@__PURE__*/ Fn( ( [ p, dir, limit ] ) => {
 
@@ -649,6 +802,12 @@ const baseVisibility = /*@__PURE__*/ Fn( ( [ p, dir, limit ] ) => {
 
 		} );
 
+		If( hi.w.lessThan( 1.5 ), () => {
+
+			return 0.;
+
+		} );
+
 		const center = baseNode( index, 2. ).toVar();
 		const x = baseNode( index, 3. ).toVar();
 		const y = baseNode( index, 4. ).toVar();
@@ -657,8 +816,19 @@ const baseVisibility = /*@__PURE__*/ Fn( ( [ p, dir, limit ] ) => {
 		const localP = vec3( dot( delta, x.xyz ), dot( delta, y.xyz ), dot( delta, z ) ).toVar();
 		const localD = vec3( dot( dir, x.xyz ), dot( dir, y.xyz ), dot( dir, z ) ).toVar();
 		const halfSize = vec3( center.w, x.w, y.w ).toVar();
+		const blocked = bool( false ).toVar();
 
-		If( baseSlab( localP, baseInverse( localD ), halfSize.negate(), halfSize, limit ), () => {
+		If( hi.w.greaterThan( 2.5 ), () => {
+
+			blocked.assign( dishHit( localP, localD, halfSize, limit ) );
+
+		} ).Else( () => {
+
+			blocked.assign( baseSlab( localP, baseInverse( localD ), halfSize.negate(), halfSize, limit ) );
+
+		} );
+
+		If( blocked, () => {
 
 			return 0.;
 
@@ -694,12 +864,22 @@ const baseLighting = /*@__PURE__*/ Fn( ( [ p, n ] ) => {
 		} );
 
 		const d = baseLights.element( i ).xyz.sub( p ).toVar();
-		const len = length( d ).toVar();
-		const fall = max( 0., sub( 1., len.div( baseLights.element( i ).w ) ) ).toVar();
+		const squared = dot( d, d ).toVar();
+		const range = baseLights.element( i ).w.toVar();
+
+		If( squared.greaterThanEqual( range.mul( range ) ), () => {
+
+			Continue();
+
+		} );
+
+		const len = sqrt( squared ).toVar();
+		const fall = sub( 1., len.div( range ) ).toVar();
+		const direction = d.div( max( len, .001 ) ).toVar();
 
 		If( fall.greaterThan( .001 ), () => {
 
-			light.addAssign( baseColors.element( i ).rgb.mul( baseColors.element( i ).a ).mul( fall ).mul( fall ).mul( add( .18, mul( .82, max( dot( n, d.div( max( len, .001 ) ) ), 0. ) ) ) ).mul( baseVisibility( p.add( n.mul( .012 ) ), d.div( max( len, .001 ) ), len.sub( .10 ) ) ) );
+			light.addAssign( baseColors.element( i ).rgb.mul( baseColors.element( i ).a ).mul( fall ).mul( fall ).mul( add( .18, mul( .82, max( dot( n, direction ), 0. ) ) ) ).mul( baseVisibility( p.add( n.mul( .012 ) ), direction, len.sub( .10 ) ) ) );
 
 		} );
 
@@ -811,14 +991,19 @@ const skyFragment = /*@__PURE__*/ Fn( ( [ vWorld, skyPixel, skyPointUV ] ) => {
 	const p = vWorld.xz.toVar();
 	const broad = noise( p.mul( .032 ) ).toVar();
 	const mottled = noise( p.mul( .29 ) ).toVar();
-	const fine = noise( p.mul( 7.1 ) ).toVar();
-	const micro = noise( p.mul( 69. ) ).toVar();
 	const distance = length( p.sub( eye.xz ) ).toVar();
 	const close = sub( 1., smoothstep( 10., 90., distance ) ).toVar();
 	const low = vec3( .23, .35, .13 ).toVar();
 	const high = vec3( .37, .47, .22 ).toVar();
 	const base = mix( low, high, broad.mul( .65 ).add( mottled.mul( .35 ) ) ).toVar();
-	base.mulAssign( add( .79, fine.mul( .33 ).mul( close ) ).add( micro.mul( .18 ).mul( close ) ) );
+	base.mulAssign( .79 );
+
+	If( close.greaterThan( 0. ), () => {
+
+		base.mulAssign( add( 1., noise( p.mul( 7.1 ) ).mul( .33 ).add( noise( p.mul( 69. ) ).mul( .18 ) ).mul( close ).div( .79 ) ) );
+
+	} );
+
 	const earth = noise( p.mul( .7 ) ).mul( noise( p.mul( .12 ) ) ).toVar();
 	base.assign( mix( base, vec3( .28, .24, .14 ), smoothstep( .51, .81, earth ).mul( .27 ) ) );
 	const col = illumination( base, .92 ).toVar();
@@ -832,443 +1017,19 @@ const skyFragment = /*@__PURE__*/ Fn( ( [ vWorld, skyPixel, skyPointUV ] ) => {
 }, { vWorld: 'vec3', skyPixel: 'vec3', skyPointUV: 'vec2', return: 'vec4' } );
 
 return skyFragment(vWorld,skyPixel,skyPointUV);})();
+})();
 return {vertex,fragment};
 }
-// 5: earth-world-hills-1
-export function material_cefce723(bind){
-const position=attribute('position','vec3'),normal=attribute('normal','vec3'),uv=attribute('uv','vec2');
-const projectionMatrix=cameraProjectionMatrix,viewMatrix=cameraViewMatrix,modelMatrix=modelWorldMatrix,modelViewMatrix=modelViewMatrixNode;
-const skyViewport=viewportSize,quadCorner=attribute('quadCorner','vec2'),skyPointUV=vec2(0),skyPixel=vec3(screenCoordinate.x,viewportSize.y.sub(screenCoordinate.y),0);
-const ridgeLayer=bind("ridgeLayer","float",0);
-const daylight=bind("daylight","float",0);
-const twilight=bind("twilight","float",0);
-const moonlight=bind("moonlight","float",0);
-const clockTime=bind("clockTime","float",0);
-const torch=bind("torch","float",0);
-const sunDirection=bind("sunDirection","vec3",0);
-const eye=bind("eye","vec3",0);
-const forward=bind("forward","vec3",0);
-const lampLeft=bind("lampLeft","vec3",0);
-const lampRight=bind("lampRight","vec3",0);
-const lampDirection=bind("lampDirection","vec3",0);
-const vehicleCenter=bind("vehicleCenter","vec3",0);
-const vehicleSize=bind("vehicleSize","vec3",0);
-const lampMode=bind("lampMode","float",0);
-const vehicleHeading=bind("vehicleHeading","float",0);
-const reverseLight=bind("reverseLight","float",0);
-const rearLamp=bind("rearLamp","vec3",0);
-const rearDirection=bind("rearDirection","vec3",0);
-const vehicleInverse=bind("vehicleInverse","mat4",0);
-const wheelShape=bind("wheelShape","vec4",0);
-const wheelOffsets=bind("wheelOffsets","vec4",0);
-const baseLights=bind("baseLights","vec4",4);
-const baseColors=bind("baseColors","vec4",4);
-const baseLightCount=bind("baseLightCount","int",0);
-const baseNodeCount=bind("baseNodeCount","int",0);
-const baseTree=bind("baseTree","sampler2D",0);
-const baseTreeSize=bind("baseTreeSize","vec2",0);
-const vWorld=varying(vec3(),"sky_vWorld");
-const vNormal=varying(vec3(),"sky_vNormal");
-const vertex=(()=>{// Three.js Transpiler r186
-
-
-
-const skyVertex = /*@__PURE__*/ Fn( () => {
-
-	const skyPosition = vec4( 0. ).toVar();
-	const skyPointSize = float( 1. ).toVar();
-	vWorld.assign( modelMatrix.mul( vec4( position, 1. ) ).xyz );
-	vNormal.assign( normal );
-	skyPosition.assign( projectionMatrix.mul( viewMatrix ).mul( vec4( vWorld, 1. ) ) );
-
-	return skyPosition;
-
-} );
-
-return skyVertex();})();
-const fragment=(()=>{// Three.js Transpiler r186
-
-
-
-const flashlightBeam = /*@__PURE__*/ Fn( ( [ fromLamp, direction ] ) => {
-
-	const len = length( fromLamp ).toVar();
-	const aim = dot( fromLamp.div( max( len, .001 ) ), direction ).toVar();
-
-	If( aim.lessThanEqual( 0. ).or( len.greaterThanEqual( 100. ) ), () => {
-
-		return 0.;
-
-	} );
-
-	const radial = sqrt( max( 0., sub( 1., aim.mul( aim ) ) ) ).div( max( aim, .001 ) ).div( 1.08 ).toVar();
-	const central = sub( 1., smoothstep( .49, .75, radial ) ).toVar();
-	const ring = exp( pow( radial.sub( .82 ).div( .055 ), 2. ).negate() ).mul( .16 ).toVar();
-	const spill = sub( 1., smoothstep( .79, 1.03, radial ) ).mul( .15 ).toVar();
-
-	return central.add( ring ).add( spill ).mul( smoothstep( 0., .08, aim ) ).mul( sub( 1., smoothstep( 75., 100., len ) ) ).mul( 2.8 ).div( add( 1., len.mul( len ).div( 170. ) ) );
-
-}, { fromLamp: 'vec3', direction: 'vec3', return: 'float' } );
-
-const headlightBeam = /*@__PURE__*/ Fn( ( [ delta ] ) => {
-
-	If( lampMode.lessThan( .001 ), () => {
-
-		return 0.;
-
-	} );
-
-	const len = length( delta ).toVar();
-	const aim = dot( delta.div( max( len, .001 ) ), lampDirection ).toVar();
-
-	If( aim.lessThanEqual( 0. ), () => {
-
-		return 0.;
-
-	} );
-
-	const high = clamp( lampMode.sub( 1. ), 0., 1. ).toVar();
-	const range = mix( 65., 125., high ).toVar();
-	const radial = sqrt( max( 0., sub( 1., aim.mul( aim ) ) ) ).div( max( aim, .001 ) ).toVar();
-	const cone = sub( 1., smoothstep( mix( .32, .20, high ), mix( .68, .40, high ), radial ) ).toVar();
-	const spill = sub( 1., smoothstep( .55, .83, radial ) ).mul( .11 ).toVar();
-
-	return cone.add( spill ).mul( sub( 1., smoothstep( range.mul( .72 ), range, len ) ) ).mul( mix( 3.3, 5.8, high ) ).div( add( 1., len.mul( len ).div( mix( 200., 580., high ) ) ) ).mul( min( lampMode, 1. ) );
-
-}, { delta: 'vec3', return: 'float' } );
-
-const rearBeam = /*@__PURE__*/ Fn( ( [ p ] ) => {
-
-	If( reverseLight.lessThan( .001 ), () => {
-
-		return 0.;
-
-	} );
-
-	const delta = p.sub( rearLamp ).toVar();
-	const len = length( delta ).toVar();
-
-	If( len.greaterThan( 13. ), () => {
-
-		return 0.;
-
-	} );
-
-	const aim = dot( delta.div( max( len, .001 ) ), rearDirection ).toVar();
-
-	return smoothstep( .30, .83, aim ).mul( sub( 1., smoothstep( 8., 13., len ) ) ).mul( reverseLight ).mul( 2.4 ).div( add( 1., len.mul( len ).mul( .28 ) ) );
-
-}, { p: 'vec3', return: 'float' } );
-
-const boxHit = /*@__PURE__*/ Fn( ( [ o, inv, center, size ] ) => {
-
-	const a = center.sub( size ).sub( o ).mul( inv ).toVar();
-	const b = center.add( size ).sub( o ).mul( inv ).toVar();
-	const lo = min( a, b ).toVar();
-	const hi = max( a, b ).toVar();
-
-	return step( max( max( max( lo.x, lo.y ), lo.z ), .002 ), min( min( hi.x, hi.y ), hi.z ) );
-
-}, { o: 'vec3', inv: 'vec3', center: 'vec3', size: 'vec3', return: 'float' } );
-
-const wheelHit = /*@__PURE__*/ Fn( ( [ o, d, center ] ) => {
-
-	const radii = vec3( wheelShape.w, wheelShape.z, wheelShape.z ).toVar();
-	const q = o.sub( center ).div( radii ).toVar();
-	const v = d.div( radii ).toVar();
-	const a = dot( v, v ).toVar();
-	const b = dot( q, v ).toVar();
-	const c = dot( q, q ).sub( 1. ).toVar();
-	const h = b.mul( b ).sub( a.mul( c ) ).toVar();
-
-	return select( h.greaterThanEqual( 0. ).and( b.negate().add( sqrt( max( 0., h ) ) ).div( a ).greaterThan( .002 ) ), 1., 0. );
-
-}, { o: 'vec3', d: 'vec3', center: 'vec3', return: 'float' } );
-
-const vehicleOcclusion = /*@__PURE__*/ Fn( ( [ p, light ] ) => {
-
-	If( vehicleSize.x.lessThan( .01 ).or( light.y.lessThanEqual( 0. ) ), () => {
-
-		return 1.;
-
-	} );
-
-	const relative = vehicleCenter.sub( p ).toVar();
-	const along = max( 0., dot( relative, light ) ).toVar();
-
-	If( dot( relative.sub( light.mul( along ) ), relative.sub( light.mul( along ) ) ).greaterThan( 9. ), () => {
-
-		return 1.;
-
-	} );
-
-	const o = vehicleInverse.mul( vec4( p, 1. ) ).xyz.toVar();
-	const d = mat3( vehicleInverse ).mul( light ).toVar();
-	const inv = sign( d.add( vec3( .000001 ) ) ).div( max( abs( d ), vec3( .000001 ) ) ).toVar();
-	const hit = boxHit( o, inv, vec3( 0., .20, 0. ), vec3( vehicleSize.x, .19, vehicleSize.z ) ).toVar();
-	hit.assign( max( hit, boxHit( o, inv, vec3( 0., .73, .20 ), vec3( vehicleSize.x.mul( .82 ), .41, .38 ) ) ) );
-	hit.assign( max( hit, wheelHit( o, d, vec3( wheelShape.x.negate(), wheelOffsets.x, wheelShape.y.negate() ) ) ) );
-	hit.assign( max( hit, wheelHit( o, d, vec3( wheelShape.x.negate(), wheelOffsets.y, wheelShape.y ) ) ) );
-	hit.assign( max( hit, wheelHit( o, d, vec3( wheelShape.x, wheelOffsets.z, wheelShape.y.negate() ) ) ) );
-	hit.assign( max( hit, wheelHit( o, d, vec3( wheelShape.x, wheelOffsets.w, wheelShape.y ) ) ) );
-
-	return mix( 1., .06, hit );
-
-}, { p: 'vec3', light: 'vec3', return: 'float' } );
-
-const baseNode = /*@__PURE__*/ Fn( ( [ index, component ] ) => {
-
-	const pixel = index.mul( 6. ).add( component ).toVar();
-
-	return baseTree.sample( vec2( mod( pixel, baseTreeSize.x ), floor( pixel.div( baseTreeSize.x ) ) ).add( .5 ).div( baseTreeSize ) );
-
-}, { index: 'float', component: 'float', return: 'vec4' } );
-
-const baseSlab = /*@__PURE__*/ Fn( ( [ p, inverseDir, lo, hi, limit ] ) => {
-
-	const a = lo.sub( p ).mul( inverseDir ).toVar();
-	const b = hi.sub( p ).mul( inverseDir ).toVar();
-	const n = min( a, b ).toVar();
-	const f = max( a, b ).toVar();
-	const enter = max( max( n.x, n.y ), n.z ).toVar();
-	const leave = min( min( f.x, f.y ), f.z ).toVar();
-
-	return leave.greaterThan( max( enter, .004 ) ).and( enter.lessThan( limit ) );
-
-}, { p: 'vec3', inverseDir: 'vec3', lo: 'vec3', hi: 'vec3', limit: 'float', return: 'bool' } );
-
-const baseInverse = /*@__PURE__*/ Fn( ( [ d ] ) => {
-
-	return div( 1., mix( vec3( - 1. ), vec3( 1. ), step( vec3( 0. ), d ) ).mul( max( abs( d ), vec3( .000001 ) ) ) );
-
-}, { d: 'vec3', return: 'vec3' } );
-
-const baseVisibility = /*@__PURE__*/ Fn( ( [ p, dir, limit ] ) => {
-
-	If( baseNodeCount.equal( 0 ).or( limit.lessThanEqual( .008 ) ), () => {
-
-		return 1.;
-
-	} );
-
-	const inv = baseInverse( dir ).toVar();
-	const index = float( 0. ).toVar();
-
-	Loop( { start: 0, end: 1024, name: 'visit' }, () => {
-
-		If( index.greaterThanEqual( float( baseNodeCount ) ), () => {
-
-			return 1.;
-
-		} );
-
-		const lo = baseNode( index, 0. ).toVar();
-		const hi = baseNode( index, 1. ).toVar();
-
-		If( baseSlab( p, inv, lo.xyz, hi.xyz, limit ).not(), () => {
-
-			index.assign( lo.w );
-			Continue();
-
-		} );
-
-		If( hi.w.lessThan( .5 ), () => {
-
-			index.addAssign( 1. );
-			Continue();
-
-		} );
-
-		const center = baseNode( index, 2. ).toVar();
-		const x = baseNode( index, 3. ).toVar();
-		const y = baseNode( index, 4. ).toVar();
-		const z = baseNode( index, 5. ).xyz.toVar();
-		const delta = p.sub( center.xyz ).toVar();
-		const localP = vec3( dot( delta, x.xyz ), dot( delta, y.xyz ), dot( delta, z ) ).toVar();
-		const localD = vec3( dot( dir, x.xyz ), dot( dir, y.xyz ), dot( dir, z ) ).toVar();
-		const halfSize = vec3( center.w, x.w, y.w ).toVar();
-
-		If( baseSlab( localP, baseInverse( localD ), halfSize.negate(), halfSize, limit ), () => {
-
-			return 0.;
-
-		} );
-
-		index.assign( lo.w );
-
-	} );
-
-	return 0.;
-
-}, { p: 'vec3', dir: 'vec3', limit: 'float', return: 'float' } );
-
-const basePointVisibility = /*@__PURE__*/ Fn( ( [ p, normal, emitter ] ) => {
-
-	const delta = emitter.sub( p ).toVar();
-	const len = length( delta ).toVar();
-
-	return baseVisibility( p.add( normal.mul( .012 ) ), delta.div( max( len, .001 ) ), len.sub( .055 ) );
-
-}, { p: 'vec3', normal: 'vec3', emitter: 'vec3', return: 'float' } );
-
-const baseLighting = /*@__PURE__*/ Fn( ( [ p, n ] ) => {
-
-	const light = vec3( 0. ).toVar();
-
-	Loop( 4, ( { i } ) => {
-
-		If( i.greaterThanEqual( baseLightCount ), () => {
-
-			Break();
-
-		} );
-
-		const d = baseLights.element( i ).xyz.sub( p ).toVar();
-		const len = length( d ).toVar();
-		const fall = max( 0., sub( 1., len.div( baseLights.element( i ).w ) ) ).toVar();
-
-		If( fall.greaterThan( .001 ), () => {
-
-			light.addAssign( baseColors.element( i ).rgb.mul( baseColors.element( i ).a ).mul( fall ).mul( fall ).mul( add( .18, mul( .82, max( dot( n, d.div( max( len, .001 ) ) ), 0. ) ) ) ).mul( baseVisibility( p.add( n.mul( .012 ) ), d.div( max( len, .001 ) ), len.sub( .10 ) ) ) );
-
-		} );
-
-	} );
-
-	return light;
-
-}, { p: 'vec3', n: 'vec3', return: 'vec3' } );
-
-const hash = /*@__PURE__*/ Fn( ( [ p ] ) => {
-
-	return fract( sin( dot( p, vec2( 127.1, 311.7 ) ) ).mul( 43758.5453 ) );
-
-}, { p: 'vec2', return: 'float' } );
-
-const noise = /*@__PURE__*/ Fn( ( [ p ] ) => {
-
-	const i = floor( p ).toVar();
-	const f = fract( p ).toVar();
-	f.assign( f.mul( f ).mul( sub( 3., mul( 2., f ) ) ) );
-
-	return mix( mix( hash( i ), hash( i.add( vec2( 1, 0 ) ) ), f.x ), mix( hash( i.add( vec2( 0, 1 ) ) ), hash( i.add( vec2( 1, 1 ) ) ), f.x ), f.y );
-
-}, { p: 'vec2', return: 'float' } );
-
-const illumination = /*@__PURE__*/ Fn( ( [ base, occlusion ] ) => {
-
-	const sunUp = smoothstep( - .08, .3, sunDirection.y ).toVar();
-	const warmth = mix( vec3( 1. ), vec3( 1.14, .76, .53 ), twilight.mul( .7 ) ).toVar();
-	const lit = base.mul( warmth ).mul( add( .18, mul( .82, daylight ) ) ).mul( occlusion ).toVar();
-	const nightTint = vec3( .019, .027, .027 ).mul( add( 0.62, base.g.mul( 2. ) ) ).toVar();
-	lit.assign( mix( nightTint, lit, daylight ) );
-	lit.addAssign( base.mul( vec3( .19, .23, .31 ) ).mul( moonlight ).mul( .47 ) );
-
-	return lit;
-
-}, { base: 'vec3', occlusion: 'float', return: 'vec3' } );
-
-const torchLight = /*@__PURE__*/ Fn( ( [ lit_immutable, base, pos, occlusion ] ) => {
-
-	const lit = lit_immutable.toVar();
-
-	If( daylight.greaterThan( .001 ).and( sunDirection.y.greaterThan( - .02 ) ), () => {
-
-		lit.mulAssign( mix( 1., vehicleOcclusion( pos.add( vec3( 0., .004, 0. ) ), sunDirection ).mul( baseVisibility( pos.add( vec3( 0., .03, 0. ) ), sunDirection, 2000. ) ), daylight.mul( .82 ) ) );
-
-	} );
-
-	const beam = float( 0. ).toVar();
-
-	If( torch.greaterThan( .001 ), () => {
-
-		const b = flashlightBeam( pos.sub( eye ), forward ).mul( torch ).toVar();
-
-		If( b.greaterThan( .001 ), () => {
-
-			beam.assign( b.mul( add( .12, mul( .88, max( normalize( eye.sub( pos ) ).y, 0. ) ) ) ).mul( basePointVisibility( pos, vec3( 0., 1., 0. ), eye ) ) );
-
-		} );
-
-	} );
-
-	If( lampMode.greaterThan( .001 ), () => {
-
-		const l = headlightBeam( pos.sub( lampLeft ) ).toVar();
-		const r = headlightBeam( pos.sub( lampRight ) ).toVar();
-
-		If( l.greaterThan( .001 ), () => {
-
-			beam.addAssign( l.mul( add( .13, mul( .87, max( normalize( lampLeft.sub( pos ) ).y, 0. ) ) ) ).mul( basePointVisibility( pos, vec3( 0., 1., 0. ), lampLeft ) ) );
-
-		} );
-
-		If( r.greaterThan( .001 ), () => {
-
-			beam.addAssign( r.mul( add( .13, mul( .87, max( normalize( lampRight.sub( pos ) ).y, 0. ) ) ) ).mul( basePointVisibility( pos, vec3( 0., 1., 0. ), lampRight ) ) );
-
-		} );
-
-	} );
-
-	const rear = rearBeam( pos ).toVar();
-
-	If( rear.greaterThan( .001 ), () => {
-
-		rear.mulAssign( basePointVisibility( pos, vec3( 0., 1., 0. ), rearLamp ) );
-
-	} );
-
-	return sqrt( lit.mul( lit ).add( base.mul( vec3( .92, .96, 1. ).mul( beam ).add( vec3( 1., .009, .002 ).mul( rear ) ).add( baseLighting( pos, vec3( 0., 1., 0. ) ) ) ).mul( occlusion ).mul( .48 ) ) );
-
-}, { lit: 'vec3', base: 'vec3', pos: 'vec3', occlusion: 'float', return: 'vec3' } );
-
-const groundHaze = /*@__PURE__*/ Fn( ( [ c, pos ] ) => {
-
-	const d = length( pos.xz.sub( eye.xz ) ).toVar();
-	const haze = sub( 1., exp( d.negate().mul( .0019 ) ) ).toVar();
-	const toward = dot( normalize( pos.xz.sub( eye.xz ) ), normalize( sunDirection.xz.add( vec2( .0001 ) ) ) ).mul( .5 ).add( .5 ).toVar();
-	const fog = mix( vec3( .031, .041, .053 ), vec3( .57, .67, .64 ), daylight ).toVar();
-	fog.assign( mix( fog, vec3( .76, .43, .26 ), twilight.mul( pow( toward, 4. ) ).mul( .72 ) ) );
-
-	return mix( c, fog, haze.mul( .92 ) );
-
-}, { c: 'vec3', pos: 'vec3', return: 'vec3' } );
-
-const skyFragment = /*@__PURE__*/ Fn( ( [ vWorld, vNormal, skyPixel, skyPointUV ] ) => {
-
-	const skyColor = vec4( 0. ).toVar();
-	const n = normalize( vNormal ).toVar();
-	const slope = add( .65, mul( .35, max( 0., dot( n, sunDirection ) ) ) ).toVar();
-	const patch = noise( vWorld.xz.mul( .006 ) ).toVar();
-	const base = mix( vec3( .19, .27, .16 ), vec3( .28, .34, .22 ), patch ).toVar();
-	const lit = illumination( base, slope ).toVar();
-	lit.assign( mix( lit, vec3( .008, .012, .015 ).add( base.mul( moonlight ).mul( .09 ) ), sub( 1., daylight ) ) );
-	const toward = dot( normalize( vWorld.xz.sub( eye.xz ) ), normalize( sunDirection.xz.add( vec2( .0001 ) ) ) ).mul( .5 ).add( .5 ).toVar();
-	const haze = mix( vec3( .045, .057, .076 ), vec3( .57, .67, .67 ), daylight ).toVar();
-	haze.assign( mix( haze, vec3( .72, .44, .30 ), twilight.mul( pow( toward, 4. ) ).mul( .68 ) ) );
-	const distance = length( vWorld.xz.sub( eye.xz ) ).toVar();
-	const air = add( .34, ridgeLayer.mul( .15 ) ).add( smoothstep( 1700., 7200., distance ).mul( .12 ) ).mul( add( .45, mul( .55, daylight ) ) ).toVar();
-	const color = mix( lit, haze, air ).toVar();
-	skyColor.assign( vec4( color, 1. ) );
-
-	return skyColor;
-
-}, { vWorld: 'vec3', vNormal: 'vec3', skyPixel: 'vec3', skyPointUV: 'vec2', return: 'vec4' } );
-
-return skyFragment(vWorld,vNormal,skyPixel,skyPointUV);})();
-return {vertex,fragment};
-}
-// 6: earth-world-Mesh
-export function material_6dc5e826(bind){
+// 5: earth Mesh
+export function material_b49c2ab7(bind){
 const position=attribute('position','vec3'),normal=attribute('normal','vec3'),uv=attribute('uv','vec2');
 const projectionMatrix=cameraProjectionMatrix,viewMatrix=cameraViewMatrix,modelMatrix=modelWorldMatrix,modelViewMatrix=modelViewMatrixNode;
 const skyViewport=viewportSize,quadCorner=attribute('quadCorner','vec2'),skyPointUV=vec2(0),skyPixel=vec3(screenCoordinate.x,viewportSize.y.sub(screenCoordinate.y),0);
 const buildMask=bind("buildMask","sampler2D",0);
 const buildMaskOrigin=bind("buildMaskOrigin","vec2",0);
-const grassOrigin=bind("grassOrigin","vec2",0);
 const eye=bind("eye","vec3",0);
 const clockTime=bind("clockTime","float",0);
+const grassRange=bind("grassRange","float",0);
 const daylight=bind("daylight","float",0);
 const twilight=bind("twilight","float",0);
 const moonlight=bind("moonlight","float",0);
@@ -1283,6 +1044,7 @@ const vehicleSize=bind("vehicleSize","vec3",0);
 const lampMode=bind("lampMode","float",0);
 const vehicleHeading=bind("vehicleHeading","float",0);
 const reverseLight=bind("reverseLight","float",0);
+const shadowDetail=bind("shadowDetail","float",0);
 const rearLamp=bind("rearLamp","vec3",0);
 const rearDirection=bind("rearDirection","vec3",0);
 const vehicleInverse=bind("vehicleInverse","mat4",0);
@@ -1299,7 +1061,13 @@ const vHeight=varying(float(),"sky_vHeight");
 const vSeed=varying(float(),"sky_vSeed");
 const offset=attribute("offset","vec2");
 const shape=attribute("shape","vec4");
-const vertex=(()=>{// Three.js Transpiler r186
+const vertex=Fn(()=>{
+buildMask.sample( vec2(0) ).toStack();
+buildMaskOrigin.toStack();
+eye.toStack();
+clockTime.toStack();
+grassRange.toStack();
+return (()=>{// Three.js Transpiler r186
 
 
 
@@ -1309,7 +1077,7 @@ const skyVertex = /*@__PURE__*/ Fn( () => {
 	const skyPointSize = float( 1. ).toVar();
 	const xz = modelMatrix.mul( vec4( offset.x, 0., offset.y, 1. ) ).xz.toVar();
 	const distance = length( xz.sub( eye.xz ) ).toVar();
-	const fade = sub( 1., smoothstep( 12., 18., distance ) ).toVar();
+	const fade = sub( 1., smoothstep( grassRange.mul( 2. ).div( 3. ), grassRange, distance ) ).toVar();
 	const buildUV = xz.sub( buildMaskOrigin ).div( 64. ).toVar();
 
 	If( min( min( buildUV.x, buildUV.y ), min( sub( 1., buildUV.x ), sub( 1., buildUV.y ) ) ).greaterThan( 0. ), () => {
@@ -1339,7 +1107,35 @@ const skyVertex = /*@__PURE__*/ Fn( () => {
 } );
 
 return skyVertex();})();
-const fragment=(()=>{// Three.js Transpiler r186
+})();
+const fragment=Fn(()=>{
+eye.toStack();
+daylight.toStack();
+twilight.toStack();
+moonlight.toStack();
+torch.toStack();
+sunDirection.toStack();
+forward.toStack();
+lampLeft.toStack();
+lampRight.toStack();
+lampDirection.toStack();
+vehicleCenter.toStack();
+vehicleSize.toStack();
+lampMode.toStack();
+reverseLight.toStack();
+shadowDetail.toStack();
+rearLamp.toStack();
+rearDirection.toStack();
+vehicleInverse.toStack();
+wheelShape.toStack();
+wheelOffsets.toStack();
+baseLights.element(0).toStack();
+baseColors.element(0).toStack();
+baseLightCount.toStack();
+baseNodeCount.toStack();
+baseTree.sample( vec2(0) ).toStack();
+baseTreeSize.toStack();
+return (()=>{// Three.js Transpiler r186
 
 
 
@@ -1460,6 +1256,13 @@ const vehicleOcclusion = /*@__PURE__*/ Fn( ( [ p, light ] ) => {
 	const inv = sign( d.add( vec3( .000001 ) ) ).div( max( abs( d ), vec3( .000001 ) ) ).toVar();
 	const hit = boxHit( o, inv, vec3( 0., .20, 0. ), vec3( vehicleSize.x, .19, vehicleSize.z ) ).toVar();
 	hit.assign( max( hit, boxHit( o, inv, vec3( 0., .73, .20 ), vec3( vehicleSize.x.mul( .82 ), .41, .38 ) ) ) );
+
+	If( shadowDetail.lessThan( .5 ), () => {
+
+		return mix( 1., .06, hit );
+
+	} );
+
 	hit.assign( max( hit, wheelHit( o, d, vec3( wheelShape.x.negate(), wheelOffsets.x, wheelShape.y.negate() ) ) ) );
 	hit.assign( max( hit, wheelHit( o, d, vec3( wheelShape.x.negate(), wheelOffsets.y, wheelShape.y ) ) ) );
 	hit.assign( max( hit, wheelHit( o, d, vec3( wheelShape.x, wheelOffsets.z, wheelShape.y.negate() ) ) ) );
@@ -1495,6 +1298,52 @@ const baseInverse = /*@__PURE__*/ Fn( ( [ d ] ) => {
 	return div( 1., mix( vec3( - 1. ), vec3( 1. ), step( vec3( 0. ), d ) ).mul( max( abs( d ), vec3( .000001 ) ) ) );
 
 }, { d: 'vec3', return: 'vec3' } );
+
+const dishRoot = /*@__PURE__*/ Fn( ( [ p, d, t, radius, limit ] ) => {
+
+	const q = p.xy.add( d.xy.mul( t ) ).toVar();
+
+	return t.greaterThan( .004 ).and( t.lessThan( limit ) ).and( dot( q, q ).lessThanEqual( radius.mul( radius ) ) );
+
+}, { p: 'vec3', d: 'vec3', t: 'float', radius: 'float', limit: 'float', return: 'bool' } );
+
+const dishSurface = /*@__PURE__*/ Fn( ( [ p, d, radius, curve, depth, limit ] ) => {
+
+	const a = curve.mul( dot( d.xy, d.xy ) ).toVar();
+	const b = d.z.add( mul( 2., curve ).mul( dot( p.xy, d.xy ) ) ).toVar();
+	const c = p.z.add( curve.mul( dot( p.xy, p.xy ) ) ).sub( depth ).toVar();
+	const hit = bool( false ).toVar();
+
+	If( abs( a ).lessThan( .0000001 ), () => {
+
+		If( abs( b ).greaterThanEqual( .0000001 ), () => {
+
+			hit.assign( dishRoot( p, d, c.negate().div( b ), radius, limit ) );
+
+		} );
+
+	} ).Else( () => {
+
+		const h = b.mul( b ).sub( mul( 4., a ).mul( c ) ).toVar();
+
+		If( h.greaterThanEqual( 0. ), () => {
+
+			const root = sqrt( h ).toVar();
+			hit.assign( dishRoot( p, d, b.negate().sub( root ).div( mul( 2., a ) ), radius, limit ).or( dishRoot( p, d, b.negate().add( root ).div( mul( 2., a ) ), radius, limit ) ) );
+
+		} );
+
+	} );
+
+	return hit;
+
+}, { p: 'vec3', d: 'vec3', radius: 'float', curve: 'float', depth: 'float', limit: 'float', return: 'bool' } );
+
+const dishHit = /*@__PURE__*/ Fn( ( [ p, d, shape, limit ] ) => {
+
+	return dishSurface( p, d, shape.x, shape.y, 0., limit ).or( dishSurface( p, d, shape.x, shape.y, shape.z, limit ) );
+
+}, { p: 'vec3', d: 'vec3', shape: 'vec3', limit: 'float', return: 'bool' } );
 
 const baseVisibility = /*@__PURE__*/ Fn( ( [ p, dir, limit ] ) => {
 
@@ -1532,6 +1381,12 @@ const baseVisibility = /*@__PURE__*/ Fn( ( [ p, dir, limit ] ) => {
 
 		} );
 
+		If( hi.w.lessThan( 1.5 ), () => {
+
+			return 0.;
+
+		} );
+
 		const center = baseNode( index, 2. ).toVar();
 		const x = baseNode( index, 3. ).toVar();
 		const y = baseNode( index, 4. ).toVar();
@@ -1540,8 +1395,19 @@ const baseVisibility = /*@__PURE__*/ Fn( ( [ p, dir, limit ] ) => {
 		const localP = vec3( dot( delta, x.xyz ), dot( delta, y.xyz ), dot( delta, z ) ).toVar();
 		const localD = vec3( dot( dir, x.xyz ), dot( dir, y.xyz ), dot( dir, z ) ).toVar();
 		const halfSize = vec3( center.w, x.w, y.w ).toVar();
+		const blocked = bool( false ).toVar();
 
-		If( baseSlab( localP, baseInverse( localD ), halfSize.negate(), halfSize, limit ), () => {
+		If( hi.w.greaterThan( 2.5 ), () => {
+
+			blocked.assign( dishHit( localP, localD, halfSize, limit ) );
+
+		} ).Else( () => {
+
+			blocked.assign( baseSlab( localP, baseInverse( localD ), halfSize.negate(), halfSize, limit ) );
+
+		} );
+
+		If( blocked, () => {
 
 			return 0.;
 
@@ -1577,12 +1443,22 @@ const baseLighting = /*@__PURE__*/ Fn( ( [ p, n ] ) => {
 		} );
 
 		const d = baseLights.element( i ).xyz.sub( p ).toVar();
-		const len = length( d ).toVar();
-		const fall = max( 0., sub( 1., len.div( baseLights.element( i ).w ) ) ).toVar();
+		const squared = dot( d, d ).toVar();
+		const range = baseLights.element( i ).w.toVar();
+
+		If( squared.greaterThanEqual( range.mul( range ) ), () => {
+
+			Continue();
+
+		} );
+
+		const len = sqrt( squared ).toVar();
+		const fall = sub( 1., len.div( range ) ).toVar();
+		const direction = d.div( max( len, .001 ) ).toVar();
 
 		If( fall.greaterThan( .001 ), () => {
 
-			light.addAssign( baseColors.element( i ).rgb.mul( baseColors.element( i ).a ).mul( fall ).mul( fall ).mul( add( .18, mul( .82, max( dot( n, d.div( max( len, .001 ) ) ), 0. ) ) ) ).mul( baseVisibility( p.add( n.mul( .012 ) ), d.div( max( len, .001 ) ), len.sub( .10 ) ) ) );
+			light.addAssign( baseColors.element( i ).rgb.mul( baseColors.element( i ).a ).mul( fall ).mul( fall ).mul( add( .18, mul( .82, max( dot( n, direction ), 0. ) ) ) ).mul( baseVisibility( p.add( n.mul( .012 ) ), direction, len.sub( .10 ) ) ) );
 
 		} );
 
@@ -1704,10 +1580,11 @@ const skyFragment = /*@__PURE__*/ Fn( ( [ vWorld, vHeight, vSeed, skyPixel, skyP
 }, { vWorld: 'vec3', vHeight: 'float', vSeed: 'float', skyPixel: 'vec3', skyPointUV: 'vec2', return: 'vec4' } );
 
 return skyFragment(vWorld,vHeight,vSeed,skyPixel,skyPointUV);})();
+})();
 return {vertex,fragment};
 }
-// 7: moon-world-Mesh
-export function material_649d0435(bind){
+// 6: moon Mesh
+export function material_7afce393(bind){
 const position=attribute('position','vec3'),normal=attribute('normal','vec3'),uv=attribute('uv','vec2');
 const projectionMatrix=cameraProjectionMatrix,viewMatrix=cameraViewMatrix,modelMatrix=modelWorldMatrix,modelViewMatrix=modelViewMatrixNode;
 const skyViewport=viewportSize,quadCorner=attribute('quadCorner','vec2'),skyPointUV=vec2(0),skyPixel=vec3(screenCoordinate.x,viewportSize.y.sub(screenCoordinate.y),0);
@@ -1728,6 +1605,7 @@ const vehicleSize=bind("vehicleSize","vec3",0);
 const lampMode=bind("lampMode","float",0);
 const vehicleHeading=bind("vehicleHeading","float",0);
 const reverseLight=bind("reverseLight","float",0);
+const shadowDetail=bind("shadowDetail","float",0);
 const rearLamp=bind("rearLamp","vec3",0);
 const rearDirection=bind("rearDirection","vec3",0);
 const vehicleInverse=bind("vehicleInverse","mat4",0);
@@ -1745,7 +1623,9 @@ const vPaint=varying(vec3(),"sky_vPaint");
 const vEmission=varying(float(),"sky_vEmission");
 const paintColor=attribute("paintColor","vec3");
 const emission=attribute("emission","float");
-const vertex=(()=>{// Three.js Transpiler r186
+const vertex=Fn(()=>{
+
+return (()=>{// Three.js Transpiler r186
 
 
 
@@ -1764,7 +1644,37 @@ const skyVertex = /*@__PURE__*/ Fn( () => {
 } );
 
 return skyVertex();})();
-const fragment=(()=>{// Three.js Transpiler r186
+})();
+const fragment=Fn(()=>{
+sun.toStack();
+earth.toStack();
+eye.toStack();
+forward.toStack();
+earthPower.toStack();
+day.toStack();
+lunar.toStack();
+torch.toStack();
+sunVisibility.toStack();
+lampLeft.toStack();
+lampRight.toStack();
+lampDirection.toStack();
+vehicleCenter.toStack();
+vehicleSize.toStack();
+lampMode.toStack();
+reverseLight.toStack();
+shadowDetail.toStack();
+rearLamp.toStack();
+rearDirection.toStack();
+vehicleInverse.toStack();
+wheelShape.toStack();
+wheelOffsets.toStack();
+baseLights.element(0).toStack();
+baseColors.element(0).toStack();
+baseLightCount.toStack();
+baseNodeCount.toStack();
+baseTree.sample( vec2(0) ).toStack();
+baseTreeSize.toStack();
+return (()=>{// Three.js Transpiler r186
 
 
 
@@ -1885,6 +1795,13 @@ const vehicleOcclusion = /*@__PURE__*/ Fn( ( [ p, light ] ) => {
 	const inv = sign( d.add( vec3( .000001 ) ) ).div( max( abs( d ), vec3( .000001 ) ) ).toVar();
 	const hit = boxHit( o, inv, vec3( 0., .20, 0. ), vec3( vehicleSize.x, .19, vehicleSize.z ) ).toVar();
 	hit.assign( max( hit, boxHit( o, inv, vec3( 0., .73, .20 ), vec3( vehicleSize.x.mul( .82 ), .41, .38 ) ) ) );
+
+	If( shadowDetail.lessThan( .5 ), () => {
+
+		return mix( 1., .06, hit );
+
+	} );
+
 	hit.assign( max( hit, wheelHit( o, d, vec3( wheelShape.x.negate(), wheelOffsets.x, wheelShape.y.negate() ) ) ) );
 	hit.assign( max( hit, wheelHit( o, d, vec3( wheelShape.x.negate(), wheelOffsets.y, wheelShape.y ) ) ) );
 	hit.assign( max( hit, wheelHit( o, d, vec3( wheelShape.x, wheelOffsets.z, wheelShape.y.negate() ) ) ) );
@@ -1920,6 +1837,52 @@ const baseInverse = /*@__PURE__*/ Fn( ( [ d ] ) => {
 	return div( 1., mix( vec3( - 1. ), vec3( 1. ), step( vec3( 0. ), d ) ).mul( max( abs( d ), vec3( .000001 ) ) ) );
 
 }, { d: 'vec3', return: 'vec3' } );
+
+const dishRoot = /*@__PURE__*/ Fn( ( [ p, d, t, radius, limit ] ) => {
+
+	const q = p.xy.add( d.xy.mul( t ) ).toVar();
+
+	return t.greaterThan( .004 ).and( t.lessThan( limit ) ).and( dot( q, q ).lessThanEqual( radius.mul( radius ) ) );
+
+}, { p: 'vec3', d: 'vec3', t: 'float', radius: 'float', limit: 'float', return: 'bool' } );
+
+const dishSurface = /*@__PURE__*/ Fn( ( [ p, d, radius, curve, depth, limit ] ) => {
+
+	const a = curve.mul( dot( d.xy, d.xy ) ).toVar();
+	const b = d.z.add( mul( 2., curve ).mul( dot( p.xy, d.xy ) ) ).toVar();
+	const c = p.z.add( curve.mul( dot( p.xy, p.xy ) ) ).sub( depth ).toVar();
+	const hit = bool( false ).toVar();
+
+	If( abs( a ).lessThan( .0000001 ), () => {
+
+		If( abs( b ).greaterThanEqual( .0000001 ), () => {
+
+			hit.assign( dishRoot( p, d, c.negate().div( b ), radius, limit ) );
+
+		} );
+
+	} ).Else( () => {
+
+		const h = b.mul( b ).sub( mul( 4., a ).mul( c ) ).toVar();
+
+		If( h.greaterThanEqual( 0. ), () => {
+
+			const root = sqrt( h ).toVar();
+			hit.assign( dishRoot( p, d, b.negate().sub( root ).div( mul( 2., a ) ), radius, limit ).or( dishRoot( p, d, b.negate().add( root ).div( mul( 2., a ) ), radius, limit ) ) );
+
+		} );
+
+	} );
+
+	return hit;
+
+}, { p: 'vec3', d: 'vec3', radius: 'float', curve: 'float', depth: 'float', limit: 'float', return: 'bool' } );
+
+const dishHit = /*@__PURE__*/ Fn( ( [ p, d, shape, limit ] ) => {
+
+	return dishSurface( p, d, shape.x, shape.y, 0., limit ).or( dishSurface( p, d, shape.x, shape.y, shape.z, limit ) );
+
+}, { p: 'vec3', d: 'vec3', shape: 'vec3', limit: 'float', return: 'bool' } );
 
 const baseVisibility = /*@__PURE__*/ Fn( ( [ p, dir, limit ] ) => {
 
@@ -1957,6 +1920,12 @@ const baseVisibility = /*@__PURE__*/ Fn( ( [ p, dir, limit ] ) => {
 
 		} );
 
+		If( hi.w.lessThan( 1.5 ), () => {
+
+			return 0.;
+
+		} );
+
 		const center = baseNode( index, 2. ).toVar();
 		const x = baseNode( index, 3. ).toVar();
 		const y = baseNode( index, 4. ).toVar();
@@ -1965,8 +1934,19 @@ const baseVisibility = /*@__PURE__*/ Fn( ( [ p, dir, limit ] ) => {
 		const localP = vec3( dot( delta, x.xyz ), dot( delta, y.xyz ), dot( delta, z ) ).toVar();
 		const localD = vec3( dot( dir, x.xyz ), dot( dir, y.xyz ), dot( dir, z ) ).toVar();
 		const halfSize = vec3( center.w, x.w, y.w ).toVar();
+		const blocked = bool( false ).toVar();
 
-		If( baseSlab( localP, baseInverse( localD ), halfSize.negate(), halfSize, limit ), () => {
+		If( hi.w.greaterThan( 2.5 ), () => {
+
+			blocked.assign( dishHit( localP, localD, halfSize, limit ) );
+
+		} ).Else( () => {
+
+			blocked.assign( baseSlab( localP, baseInverse( localD ), halfSize.negate(), halfSize, limit ) );
+
+		} );
+
+		If( blocked, () => {
 
 			return 0.;
 
@@ -2002,12 +1982,22 @@ const baseLighting = /*@__PURE__*/ Fn( ( [ p, n ] ) => {
 		} );
 
 		const d = baseLights.element( i ).xyz.sub( p ).toVar();
-		const len = length( d ).toVar();
-		const fall = max( 0., sub( 1., len.div( baseLights.element( i ).w ) ) ).toVar();
+		const squared = dot( d, d ).toVar();
+		const range = baseLights.element( i ).w.toVar();
+
+		If( squared.greaterThanEqual( range.mul( range ) ), () => {
+
+			Continue();
+
+		} );
+
+		const len = sqrt( squared ).toVar();
+		const fall = sub( 1., len.div( range ) ).toVar();
+		const direction = d.div( max( len, .001 ) ).toVar();
 
 		If( fall.greaterThan( .001 ), () => {
 
-			light.addAssign( baseColors.element( i ).rgb.mul( baseColors.element( i ).a ).mul( fall ).mul( fall ).mul( add( .18, mul( .82, max( dot( n, d.div( max( len, .001 ) ) ), 0. ) ) ) ).mul( baseVisibility( p.add( n.mul( .012 ) ), d.div( max( len, .001 ) ), len.sub( .10 ) ) ) );
+			light.addAssign( baseColors.element( i ).rgb.mul( baseColors.element( i ).a ).mul( fall ).mul( fall ).mul( add( .18, mul( .82, max( dot( n, direction ), 0. ) ) ) ).mul( baseVisibility( p.add( n.mul( .012 ) ), direction, len.sub( .10 ) ) ) );
 
 		} );
 
@@ -2022,20 +2012,60 @@ const skyFragment = /*@__PURE__*/ Fn( ( [ vWorld, vNormal, vPaint, vEmission, sk
 	const skyColor = vec4( 0. ).toVar();
 	const n = normalize( vNormal ).toVar();
 	const view = normalize( eye.sub( vWorld ) ).toVar();
-	const ndl = max( 0., dot( n, sun ) ).toVar();
+	const ndl = float( 0. ).toVar();
+
+	If( sun.y.greaterThan( 0. ), () => {
+
+		ndl.assign( max( 0., dot( n, sun ) ) );
+
+	} );
+
 	const ambient = mix( vec3( .009, .014, .021 ).add( vec3( .17 ).mul( day ) ), vec3( .00004 ), lunar ).toVar();
-	const light = ambient.add( vec3( 1., .96, .86 ).mul( ndl ).mul( sunVisibility ).mul( mix( day.mul( .8 ), 1.35, lunar ) ).mul( select( ndl.greaterThan( .001 ), baseVisibility( vWorld.add( n.mul( .03 ) ), sun, 2000. ), 1. ) ) ).add( vec3( .46, .63, 1. ).mul( max( 0., dot( n, earth ) ) ).mul( earthPower ).mul( select( earthPower.greaterThan( .0001 ), baseVisibility( vWorld.add( n.mul( .02 ) ), earth, 2000. ), 1. ) ) ).toVar();
+	const light = ambient.toVar();
+
+	If( ndl.greaterThan( .001 ).and( sunVisibility.greaterThan( .001 ) ), () => {
+
+		light.addAssign( vec3( 1., .96, .86 ).mul( ndl ).mul( sunVisibility ).mul( mix( day.mul( .8 ), 1.35, lunar ) ).mul( baseVisibility( vWorld.add( n.mul( .03 ) ), sun, 2000. ) ) );
+
+	} );
+
+	const earthLit = max( 0., dot( n, earth ) ).toVar();
+
+	If( earthPower.greaterThan( .0001 ).and( earthLit.greaterThan( .001 ) ), () => {
+
+		light.addAssign( vec3( .46, .63, 1. ).mul( earthLit ).mul( earthPower ).mul( baseVisibility( vWorld.add( n.mul( .02 ) ), earth, 2000. ) ) );
+
+	} );
 
 	If( torch.greaterThan( .001 ), () => {
 
 		const d = eye.sub( vWorld ).toVar();
-		light.addAssign( vec3( .92, .96, 1. ).mul( flashlightBeam( d.negate(), forward ) ).mul( torch ).mul( add( .10, mul( .90, max( 0., dot( n, normalize( d ) ) ) ) ) ).mul( basePointVisibility( vWorld, n, eye ) ) );
+		const beam = flashlightBeam( d.negate(), forward ).mul( torch ).toVar();
+
+		If( beam.greaterThan( .001 ), () => {
+
+			light.addAssign( vec3( .92, .96, 1. ).mul( beam ).mul( add( .10, mul( .90, max( 0., dot( n, normalize( d ) ) ) ) ) ).mul( basePointVisibility( vWorld, n, eye ) ) );
+
+		} );
 
 	} );
 
 	If( lampMode.greaterThan( .001 ), () => {
 
-		light.addAssign( vec3( .92, .96, 1. ).mul( headlightBeam( vWorld.sub( lampLeft ) ).mul( basePointVisibility( vWorld, n, lampLeft ) ).add( headlightBeam( vWorld.sub( lampRight ) ).mul( basePointVisibility( vWorld, n, lampRight ) ) ) ).mul( .15 ) );
+		const l = headlightBeam( vWorld.sub( lampLeft ) ).toVar();
+		const r = headlightBeam( vWorld.sub( lampRight ) ).toVar();
+
+		If( l.greaterThan( .001 ), () => {
+
+			light.addAssign( vec3( .92, .96, 1. ).mul( l ).mul( basePointVisibility( vWorld, n, lampLeft ) ).mul( .15 ) );
+
+		} );
+
+		If( r.greaterThan( .001 ), () => {
+
+			light.addAssign( vec3( .92, .96, 1. ).mul( r ).mul( basePointVisibility( vWorld, n, lampRight ) ).mul( .15 ) );
+
+		} );
 
 	} );
 
@@ -2062,9 +2092,10 @@ const skyFragment = /*@__PURE__*/ Fn( ( [ vWorld, vNormal, vPaint, vEmission, sk
 }, { vWorld: 'vec3', vNormal: 'vec3', vPaint: 'vec3', vEmission: 'float', skyPixel: 'vec3', skyPointUV: 'vec2', return: 'vec4' } );
 
 return skyFragment(vWorld,vNormal,vPaint,vEmission,skyPixel,skyPointUV);})();
+})();
 return {vertex,fragment};
 }
-// 8: moon-world-Points
+// 7: moon Points
 export function material_30243dd9(bind){
 const position=attribute('position','vec3'),normal=attribute('normal','vec3'),uv=attribute('uv','vec2');
 const projectionMatrix=cameraProjectionMatrix,viewMatrix=cameraViewMatrix,modelMatrix=modelWorldMatrix,modelViewMatrix=modelViewMatrixNode;
@@ -2075,7 +2106,10 @@ const colors=bind("colors","vec3",7);
 const visibility=bind("visibility","float",0);
 const vIndex=varying(float(),"sky_vIndex");
 const planetIndex=attribute("planetIndex","float");
-const vertex=(()=>{// Three.js Transpiler r186
+const vertex=Fn(()=>{
+pixelRatio.toStack();
+resolved.toStack();
+return (()=>{// Three.js Transpiler r186
 
 
 
@@ -2096,7 +2130,12 @@ const skyVertex = /*@__PURE__*/ Fn( () => {
 } );
 
 return skyVertex();})();
-const fragment=(()=>{// Three.js Transpiler r186
+})();
+const fragment=Fn(()=>{
+resolved.toStack();
+colors.element(0).toStack();
+visibility.toStack();
+return (()=>{// Three.js Transpiler r186
 
 
 
@@ -2166,10 +2205,11 @@ const skyFragment = /*@__PURE__*/ Fn( ( [ vIndex, skyPixel, skyPointUV ] ) => {
 }, { vIndex: 'float', skyPixel: 'vec3', skyPointUV: 'vec2', return: 'vec4' } );
 
 return skyFragment(vIndex,skyPixel,skyPointUV);})();
+})();
 return {vertex,fragment};
 }
-// 9: ghost
-export function material_5c2bbb30(bind){
+// 8: moon ghost
+export function material_2b3674c7(bind){
 const position=attribute('position','vec3'),normal=attribute('normal','vec3'),uv=attribute('uv','vec2');
 const projectionMatrix=cameraProjectionMatrix,viewMatrix=cameraViewMatrix,modelMatrix=modelWorldMatrix,modelViewMatrix=modelViewMatrixNode;
 const skyViewport=viewportSize,quadCorner=attribute('quadCorner','vec2'),skyPointUV=vec2(0),skyPixel=vec3(screenCoordinate.x,viewportSize.y.sub(screenCoordinate.y),0);
@@ -2193,6 +2233,7 @@ const vehicleSize=bind("vehicleSize","vec3",0);
 const lampMode=bind("lampMode","float",0);
 const vehicleHeading=bind("vehicleHeading","float",0);
 const reverseLight=bind("reverseLight","float",0);
+const shadowDetail=bind("shadowDetail","float",0);
 const rearLamp=bind("rearLamp","vec3",0);
 const rearDirection=bind("rearDirection","vec3",0);
 const vehicleInverse=bind("vehicleInverse","mat4",0);
@@ -2210,7 +2251,9 @@ const vPaint=varying(vec3(),"sky_vPaint");
 const vEmission=varying(float(),"sky_vEmission");
 const paint=attribute("paint","vec3");
 const emission=attribute("emission","float");
-const vertex=(()=>{// Three.js Transpiler r186
+const vertex=Fn(()=>{
+
+return (()=>{// Three.js Transpiler r186
 
 
 
@@ -2229,7 +2272,40 @@ const skyVertex = /*@__PURE__*/ Fn( () => {
 } );
 
 return skyVertex();})();
-const fragment=(()=>{// Three.js Transpiler r186
+})();
+const fragment=Fn(()=>{
+sun.toStack();
+earth.toStack();
+eye.toStack();
+forward.toStack();
+lampColor.toStack();
+day.toStack();
+earthPower.toStack();
+lunar.toStack();
+torch.toStack();
+ghost.toStack();
+valid.toStack();
+lampOn.toStack();
+lampLeft.toStack();
+lampRight.toStack();
+lampDirection.toStack();
+vehicleCenter.toStack();
+vehicleSize.toStack();
+lampMode.toStack();
+reverseLight.toStack();
+shadowDetail.toStack();
+rearLamp.toStack();
+rearDirection.toStack();
+vehicleInverse.toStack();
+wheelShape.toStack();
+wheelOffsets.toStack();
+baseLights.element(0).toStack();
+baseColors.element(0).toStack();
+baseLightCount.toStack();
+baseNodeCount.toStack();
+baseTree.sample( vec2(0) ).toStack();
+baseTreeSize.toStack();
+return (()=>{// Three.js Transpiler r186
 
 
 
@@ -2350,6 +2426,13 @@ const vehicleOcclusion = /*@__PURE__*/ Fn( ( [ p, light ] ) => {
 	const inv = sign( d.add( vec3( .000001 ) ) ).div( max( abs( d ), vec3( .000001 ) ) ).toVar();
 	const hit = boxHit( o, inv, vec3( 0., .20, 0. ), vec3( vehicleSize.x, .19, vehicleSize.z ) ).toVar();
 	hit.assign( max( hit, boxHit( o, inv, vec3( 0., .73, .20 ), vec3( vehicleSize.x.mul( .82 ), .41, .38 ) ) ) );
+
+	If( shadowDetail.lessThan( .5 ), () => {
+
+		return mix( 1., .06, hit );
+
+	} );
+
 	hit.assign( max( hit, wheelHit( o, d, vec3( wheelShape.x.negate(), wheelOffsets.x, wheelShape.y.negate() ) ) ) );
 	hit.assign( max( hit, wheelHit( o, d, vec3( wheelShape.x.negate(), wheelOffsets.y, wheelShape.y ) ) ) );
 	hit.assign( max( hit, wheelHit( o, d, vec3( wheelShape.x, wheelOffsets.z, wheelShape.y.negate() ) ) ) );
@@ -2385,6 +2468,52 @@ const baseInverse = /*@__PURE__*/ Fn( ( [ d ] ) => {
 	return div( 1., mix( vec3( - 1. ), vec3( 1. ), step( vec3( 0. ), d ) ).mul( max( abs( d ), vec3( .000001 ) ) ) );
 
 }, { d: 'vec3', return: 'vec3' } );
+
+const dishRoot = /*@__PURE__*/ Fn( ( [ p, d, t, radius, limit ] ) => {
+
+	const q = p.xy.add( d.xy.mul( t ) ).toVar();
+
+	return t.greaterThan( .004 ).and( t.lessThan( limit ) ).and( dot( q, q ).lessThanEqual( radius.mul( radius ) ) );
+
+}, { p: 'vec3', d: 'vec3', t: 'float', radius: 'float', limit: 'float', return: 'bool' } );
+
+const dishSurface = /*@__PURE__*/ Fn( ( [ p, d, radius, curve, depth, limit ] ) => {
+
+	const a = curve.mul( dot( d.xy, d.xy ) ).toVar();
+	const b = d.z.add( mul( 2., curve ).mul( dot( p.xy, d.xy ) ) ).toVar();
+	const c = p.z.add( curve.mul( dot( p.xy, p.xy ) ) ).sub( depth ).toVar();
+	const hit = bool( false ).toVar();
+
+	If( abs( a ).lessThan( .0000001 ), () => {
+
+		If( abs( b ).greaterThanEqual( .0000001 ), () => {
+
+			hit.assign( dishRoot( p, d, c.negate().div( b ), radius, limit ) );
+
+		} );
+
+	} ).Else( () => {
+
+		const h = b.mul( b ).sub( mul( 4., a ).mul( c ) ).toVar();
+
+		If( h.greaterThanEqual( 0. ), () => {
+
+			const root = sqrt( h ).toVar();
+			hit.assign( dishRoot( p, d, b.negate().sub( root ).div( mul( 2., a ) ), radius, limit ).or( dishRoot( p, d, b.negate().add( root ).div( mul( 2., a ) ), radius, limit ) ) );
+
+		} );
+
+	} );
+
+	return hit;
+
+}, { p: 'vec3', d: 'vec3', radius: 'float', curve: 'float', depth: 'float', limit: 'float', return: 'bool' } );
+
+const dishHit = /*@__PURE__*/ Fn( ( [ p, d, shape, limit ] ) => {
+
+	return dishSurface( p, d, shape.x, shape.y, 0., limit ).or( dishSurface( p, d, shape.x, shape.y, shape.z, limit ) );
+
+}, { p: 'vec3', d: 'vec3', shape: 'vec3', limit: 'float', return: 'bool' } );
 
 const baseVisibility = /*@__PURE__*/ Fn( ( [ p, dir, limit ] ) => {
 
@@ -2422,6 +2551,12 @@ const baseVisibility = /*@__PURE__*/ Fn( ( [ p, dir, limit ] ) => {
 
 		} );
 
+		If( hi.w.lessThan( 1.5 ), () => {
+
+			return 0.;
+
+		} );
+
 		const center = baseNode( index, 2. ).toVar();
 		const x = baseNode( index, 3. ).toVar();
 		const y = baseNode( index, 4. ).toVar();
@@ -2430,8 +2565,19 @@ const baseVisibility = /*@__PURE__*/ Fn( ( [ p, dir, limit ] ) => {
 		const localP = vec3( dot( delta, x.xyz ), dot( delta, y.xyz ), dot( delta, z ) ).toVar();
 		const localD = vec3( dot( dir, x.xyz ), dot( dir, y.xyz ), dot( dir, z ) ).toVar();
 		const halfSize = vec3( center.w, x.w, y.w ).toVar();
+		const blocked = bool( false ).toVar();
 
-		If( baseSlab( localP, baseInverse( localD ), halfSize.negate(), halfSize, limit ), () => {
+		If( hi.w.greaterThan( 2.5 ), () => {
+
+			blocked.assign( dishHit( localP, localD, halfSize, limit ) );
+
+		} ).Else( () => {
+
+			blocked.assign( baseSlab( localP, baseInverse( localD ), halfSize.negate(), halfSize, limit ) );
+
+		} );
+
+		If( blocked, () => {
 
 			return 0.;
 
@@ -2467,12 +2613,22 @@ const baseLighting = /*@__PURE__*/ Fn( ( [ p, n ] ) => {
 		} );
 
 		const d = baseLights.element( i ).xyz.sub( p ).toVar();
-		const len = length( d ).toVar();
-		const fall = max( 0., sub( 1., len.div( baseLights.element( i ).w ) ) ).toVar();
+		const squared = dot( d, d ).toVar();
+		const range = baseLights.element( i ).w.toVar();
+
+		If( squared.greaterThanEqual( range.mul( range ) ), () => {
+
+			Continue();
+
+		} );
+
+		const len = sqrt( squared ).toVar();
+		const fall = sub( 1., len.div( range ) ).toVar();
+		const direction = d.div( max( len, .001 ) ).toVar();
 
 		If( fall.greaterThan( .001 ), () => {
 
-			light.addAssign( baseColors.element( i ).rgb.mul( baseColors.element( i ).a ).mul( fall ).mul( fall ).mul( add( .18, mul( .82, max( dot( n, d.div( max( len, .001 ) ) ), 0. ) ) ) ).mul( baseVisibility( p.add( n.mul( .012 ) ), d.div( max( len, .001 ) ), len.sub( .10 ) ) ) );
+			light.addAssign( baseColors.element( i ).rgb.mul( baseColors.element( i ).a ).mul( fall ).mul( fall ).mul( add( .18, mul( .82, max( dot( n, direction ), 0. ) ) ) ).mul( baseVisibility( p.add( n.mul( .012 ) ), direction, len.sub( .10 ) ) ) );
 
 		} );
 
@@ -2498,8 +2654,29 @@ const skyFragment = /*@__PURE__*/ Fn( ( [ vWorld, vNormal, vPaint, vEmission, sk
 
 	const n = normalize( vNormal ).toVar();
 	const p = vWorld.add( n.mul( .025 ) ).toVar();
-	const solar = max( 0., dot( n, sun ) ).toVar();
-	const light = mix( vec3( .013, .018, .025 ).add( vec3( .17 ).mul( day ) ), vec3( .00004 ), lunar ).add( vec3( 1., .96, .88 ).mul( solar ).mul( mix( day.mul( .8 ), 1.35, lunar ) ).mul( select( solar.greaterThan( .001 ), baseVisibility( p, sun, 2000. ), 1. ) ).mul( vehicleOcclusion( p, sun ) ) ).add( vec3( .46, .63, 1. ).mul( max( 0., dot( n, earth ) ) ).mul( earthPower ).mul( select( earthPower.greaterThan( .0001 ), baseVisibility( p, earth, 2000. ), 1. ) ) ).toVar();
+	const solar = float( 0. ).toVar();
+
+	If( sun.y.greaterThan( 0. ), () => {
+
+		solar.assign( max( 0., dot( n, sun ) ) );
+
+	} );
+
+	const light = mix( vec3( .013, .018, .025 ).add( vec3( .17 ).mul( day ) ), vec3( .00004 ), lunar ).toVar();
+
+	If( solar.greaterThan( .001 ), () => {
+
+		light.addAssign( vec3( 1., .96, .88 ).mul( solar ).mul( mix( day.mul( .8 ), 1.35, lunar ) ).mul( baseVisibility( p, sun, 2000. ) ).mul( vehicleOcclusion( p, sun ) ) );
+
+	} );
+
+	const earthLit = max( 0., dot( n, earth ) ).toVar();
+
+	If( earthPower.greaterThan( .0001 ).and( earthLit.greaterThan( .001 ) ), () => {
+
+		light.addAssign( vec3( .46, .63, 1. ).mul( earthLit ).mul( earthPower ).mul( baseVisibility( p, earth, 2000. ) ) );
+
+	} );
 
 	If( torch.greaterThan( .001 ), () => {
 
@@ -2562,317 +2739,26 @@ const skyFragment = /*@__PURE__*/ Fn( ( [ vWorld, vNormal, vPaint, vEmission, sk
 }, { vWorld: 'vec3', vNormal: 'vec3', vPaint: 'vec3', vEmission: 'float', skyPixel: 'vec3', skyPointUV: 'vec2', return: 'vec4' } );
 
 return skyFragment(vWorld,vNormal,vPaint,vEmission,skyPixel,skyPointUV);})();
+})();
 return {vertex,fragment};
 }
-// 10: moon-world-Mesh
-export function material_9a598f63(bind){
+// 9: moon batched props
+export function material_56a6609f(bind){
 const position=attribute('position','vec3'),normal=attribute('normal','vec3'),uv=attribute('uv','vec2');
 const projectionMatrix=cameraProjectionMatrix,viewMatrix=cameraViewMatrix,modelMatrix=modelWorldMatrix,modelViewMatrix=modelViewMatrixNode;
 const skyViewport=viewportSize,quadCorner=attribute('quadCorner','vec2'),skyPointUV=vec2(0),skyPixel=vec3(screenCoordinate.x,viewportSize.y.sub(screenCoordinate.y),0);
-const inverseProjection=bind("inverseProjection","mat4",0);
-const cameraWorld=bind("cameraWorld","mat4",0);
-const sunDirection=bind("sunDirection","vec3",0);
-const solarVisible=bind("solarVisible","float",0);
-const solarGlare=bind("solarGlare","float",0);
-const vRay=varying(vec3(),"sky_vRay");
-const vertex=(()=>{// Three.js Transpiler r186
-
-
-
-const skyVertex = /*@__PURE__*/ Fn( () => {
-
-	const skyPosition = vec4( 0. ).toVar();
-	const skyPointSize = float( 1. ).toVar();
-	const r = inverseProjection.mul( vec4( position.xy, 1., 1. ) ).toVar();
-	vRay.assign( mat3( cameraWorld ).mul( r.xyz ) );
-	skyPosition.assign( vec4( position.xy, 1., 1. ) );
-
-	return skyPosition;
-
-} );
-
-return skyVertex();})();
-const fragment=(()=>{// Three.js Transpiler r186
-
-
-
-const skyFragment = /*@__PURE__*/ Fn( ( [ vRay, skyPixel, skyPointUV ] ) => {
-
-	const skyColor = vec4( 0. ).toVar();
-	const d = normalize( vRay ).toVar();
-	const a = atan( length( cross( d, sunDirection ) ), dot( d, sunDirection ) ).toVar();
-	const aa = max( fwidth( a ), .000018 ).toVar();
-	const disk = sub( 1., smoothstep( sub( .0285, aa ), add( .035, aa ), a ) ).toVar();
-	const glow = exp( pow( a.div( .19 ), 1.65 ).negate() ).mul( .20 ).add( exp( a.negate().mul( 20. ) ).mul( .55 ) ).add( exp( a.negate().mul( 65. ) ).mul( .45 ) ).toVar();
-	const color = vec3( 1., .985, .95 ).mul( disk.mul( 2.2 ).add( glow.mul( solarGlare ) ) ).toVar();
-	skyColor.assign( vec4( color, 1. ) );
-
-	return skyColor;
-
-}, { vRay: 'vec3', skyPixel: 'vec3', skyPointUV: 'vec2', return: 'vec4' } );
-
-return skyFragment(vRay,skyPixel,skyPointUV);})();
-return {vertex,fragment};
-}
-// 11: moon-world-Mesh
-export function material_a5abfdab(bind){
-const position=attribute('position','vec3'),normal=attribute('normal','vec3'),uv=attribute('uv','vec2');
-const projectionMatrix=cameraProjectionMatrix,viewMatrix=cameraViewMatrix,modelMatrix=modelWorldMatrix,modelViewMatrix=modelViewMatrixNode;
-const skyViewport=viewportSize,quadCorner=attribute('quadCorner','vec2'),skyPointUV=vec2(0),skyPixel=vec3(screenCoordinate.x,viewportSize.y.sub(screenCoordinate.y),0);
-const inverseProjection=bind("inverseProjection","mat4",0);
-const cameraWorld=bind("cameraWorld","mat4",0);
-const galacticNormal=bind("galacticNormal","vec3",0);
-const galacticCenter=bind("galacticCenter","vec3",0);
-const galacticTangent=bind("galacticTangent","vec3",0);
-const night=bind("night","float",0);
-const moonlight=bind("moonlight","float",0);
-const milkyOn=bind("milkyOn","float",0);
-const vRay=varying(vec3(),"sky_vRay");
-const vertex=(()=>{// Three.js Transpiler r186
-
-
-
-const skyVertex = /*@__PURE__*/ Fn( () => {
-
-	const skyPosition = vec4( 0. ).toVar();
-	const skyPointSize = float( 1. ).toVar();
-	const r = inverseProjection.mul( vec4( position.xy, 1., 1. ) ).toVar();
-	vRay.assign( mat3( cameraWorld ).mul( r.xyz ) );
-	skyPosition.assign( vec4( position.xy, 1., 1. ) );
-
-	return skyPosition;
-
-} );
-
-return skyVertex();})();
-const fragment=(()=>{// Three.js Transpiler r186
-
-
-
-const hash = /*@__PURE__*/ Fn( ( [ p_immutable ] ) => {
-
-	const p = p_immutable.toVar();
-	p.assign( fract( p.mul( .3183099 ).add( vec3( .11, .37, .71 ) ) ) );
-	p.mulAssign( 17. );
-
-	return fract( p.x.mul( p.y ).mul( p.z ).mul( p.x.add( p.y ).add( p.z ) ) );
-
-}, { p: 'vec3', return: 'float' } );
-
-const noise3 = /*@__PURE__*/ Fn( ( [ p ] ) => {
-
-	const i = floor( p ).toVar();
-	const f = fract( p ).toVar();
-	f.assign( f.mul( f ).mul( sub( 3., mul( 2., f ) ) ) );
-
-	return mix( mix( mix( hash( i ), hash( i.add( vec3( 1, 0, 0 ) ) ), f.x ), mix( hash( i.add( vec3( 0, 1, 0 ) ) ), hash( i.add( vec3( 1, 1, 0 ) ) ), f.x ), f.y ), mix( mix( hash( i.add( vec3( 0, 0, 1 ) ) ), hash( i.add( vec3( 1, 0, 1 ) ) ), f.x ), mix( hash( i.add( vec3( 0, 1, 1 ) ) ), hash( i.add( vec3( 1, 1, 1 ) ) ), f.x ), f.y ), f.z );
-
-}, { p: 'vec3', return: 'float' } );
-
-const fbm = /*@__PURE__*/ Fn( ( [ p ] ) => {
-
-	return mul( .52, noise3( p ) ).add( mul( .27, noise3( p.mul( 2.07 ).add( 4.3 ) ) ) ).add( mul( .14, noise3( p.mul( 4.13 ).add( 12.7 ) ) ) ).add( mul( .07, noise3( p.mul( 8.19 ) ) ) );
-
-}, { p: 'vec3', return: 'float' } );
-
-const skyFragment = /*@__PURE__*/ Fn( ( [ vRay, skyPixel, skyPointUV ] ) => {
-
-	const skyColor = vec4( 0. ).toVar();
-	const d = normalize( vRay ).toVar();
-	const lat = dot( d, galacticNormal ).toVar();
-	const g = vec3( dot( d, galacticCenter ), lat, dot( d, galacticTangent ) ).toVar();
-	const clouds = fbm( g.mul( vec3( 8., 17., 10. ) ).add( vec3( 3.1, 7.4, 1.2 ) ) ).toVar();
-	const knots = noise3( g.mul( 32. ).add( vec3( 9.2, 1.8, 4. ) ) ).toVar();
-	const fine = noise3( g.mul( 83. ).add( vec3( 4.7, 12., 6. ) ) ).toVar();
-	const central = pow( max( 0., g.x ), 6. ).toVar();
-	const arm = add( .40, mul( .36, noise3( vec3( g.x.mul( 4. ), g.z.mul( 4. ), 2.8 ) ) ) ).add( mul( .38, central ) ).toVar();
-	const bend = mul( .022, sin( g.z.mul( 5. ).add( g.x.mul( 2. ) ) ) ).add( clouds.sub( .5 ).mul( .065 ) ).toVar();
-	const width = add( .052, mul( .040, clouds ) ).add( mul( .083, central ) ).toVar();
-	const band = exp( pow( lat.add( bend ).div( width ), 2. ).negate() ).toVar();
-	const bulge = exp( pow( lat.add( .025 ).div( add( .12, mul( .055, central ) ) ), 2. ).negate() ).mul( central ).toVar();
-	const ridge = add( .021, mul( .033, sin( g.z.mul( 4. ).sub( g.x.mul( 2. ) ) ) ) ).add( clouds.sub( .5 ).mul( .05 ) ).toVar();
-	const rift = exp( pow( lat.add( ridge ).div( add( .011, mul( .023, knots ) ) ), 2. ).negate() ).toVar();
-	const riftMask = smoothstep( - .5, .6, g.x ).mul( add( .35, mul( .65, knots ) ) ).toVar();
-	const branch = exp( pow( lat.sub( .055 ).add( g.z.mul( .047 ) ).add( knots.sub( .5 ).mul( .027 ) ).div( .018 ), 2. ).negate() ).mul( central ).toVar();
-	const texture = add( .22, mul( .95, smoothstep( .24, .79, clouds ) ) ).add( mul( .16, knots ) ).add( mul( .07, fine ) ).toVar();
-	const dust = band.mul( arm ).mul( texture ).add( bulge.mul( .30 ) ).mul( sub( 1., rift.mul( riftMask ).mul( .89 ) ) ).mul( sub( 1., branch.mul( .60 ) ) ).toVar();
-	const veil = night.mul( milkyOn ).toVar();
-	const color = mix( vec3( .053, .065, .078 ), vec3( .104, .089, .069 ), central.mul( .82 ) ).toVar();
-	skyColor.assign( vec4( color.mul( dust ).mul( veil ).mul( 3.35 ), 1. ) );
-
-	return skyColor;
-
-}, { vRay: 'vec3', skyPixel: 'vec3', skyPointUV: 'vec2', return: 'vec4' } );
-
-return skyFragment(vRay,skyPixel,skyPointUV);})();
-return {vertex,fragment};
-}
-// 12: moon-world-Points
-export function material_8841ef08(bind){
-const position=attribute('position','vec3'),normal=attribute('normal','vec3'),uv=attribute('uv','vec2');
-const projectionMatrix=cameraProjectionMatrix,viewMatrix=cameraViewMatrix,modelMatrix=modelWorldMatrix,modelViewMatrix=modelViewMatrixNode;
-const skyViewport=viewportSize,quadCorner=attribute('quadCorner','vec2'),skyPointUV=vec2(uv.x,uv.y.oneMinus()),skyPixel=vec3(screenCoordinate.x,viewportSize.y.sub(screenCoordinate.y),0);
-const field=bind("field","mat4",0);
-const moonDirection=bind("moonDirection","vec3",0);
-const night=bind("night","float",0);
-const starLimit=bind("starLimit","float",0);
-const pixelRatio=bind("pixelRatio","float",0);
-const zoomReveal=bind("zoomReveal","float",0);
-const earthIllumination=bind("earthIllumination","float",0);
-const vColor=varying(vec3(),"sky_vColor");
-const vAlpha=varying(float(),"sky_vAlpha");
-const magnitude=attribute("magnitude","float");
-const seed=attribute("seed","float");
-const starColor=attribute("starColor","vec3");
-const vertex=(()=>{// Three.js Transpiler r186
-
-
-
-const skyVertex = /*@__PURE__*/ Fn( () => {
-
-	const skyPosition = vec4( 0. ).toVar();
-	const skyPointSize = float( 1. ).toVar();
-	const dir = mat3( field ).mul( position ).toVar();
-	const vd = mat3( viewMatrix ).mul( dir ).toVar();
-	const p = projectionMatrix.mul( vec4( vd, 1. ) ).toVar();
-	skyPosition.assign( select( p.w.greaterThan( 0. ), vec4( p.xy, p.w.mul( .99999 ), p.w ), vec4( 2., 2., 2., 1. ) ) );
-	const visible = sub( 1., smoothstep( starLimit.sub( .5 ), starLimit.add( .22 ), magnitude ) ).toVar();
-
-	If( visible.mul( night ).lessThan( .0001 ).or( p.w.lessThanEqual( 0. ) ), () => {
-
-		skyPosition.assign( vec4( 2., 2., 2., 1. ) );
-		skyPointSize.assign( 1. );
-		vAlpha.assign( 0. );
-		vColor.assign( vec3( 0. ) );
-
-	} ).Else( () => {
-
-		const faint = smoothstep( 4.8, 8., magnitude ).toVar();
-		const strength = clamp( pow( 10., float(-.145).mul( magnitude.sub( 1. ) ) ), .14, 1.55 ).mul( 1.22 ).add( faint.mul( zoomReveal ).mul( .62 ) ).toVar();
-		const angle = length( dir.sub( moonDirection ) ).toVar();
-		const localGlare = sub( 1., exp( angle.negate().mul( 6. ) ).mul( earthIllumination ).mul( .9 ) ).toVar();
-		skyPointSize.assign( add( 1.95, clamp( sub( 5.4, magnitude ), 0., 6. ).mul( .47 ) ).add( zoomReveal.mul( add( .8, faint.mul( .4 ) ) ) ).mul( pixelRatio ) );
-		vAlpha.assign( visible.mul( strength ).mul( night ).mul( localGlare ) );
-		vColor.assign( starColor );
-
-	} );
-
-	skyPosition.xy.addAssign( quadCorner.mul( skyPointSize ).div( skyViewport ).mul( skyPosition.w ) );
-
-	return skyPosition;
-
-} );
-
-return skyVertex();})();
-const fragment=(()=>{// Three.js Transpiler r186
-
-
-
-const skyFragment = /*@__PURE__*/ Fn( ( [ vColor, vAlpha, skyPixel, skyPointUV ] ) => {
-
-	const skyColor = vec4( 0. ).toVar();
-	const q = skyPointUV.mul( 2. ).sub( 1. ).toVar();
-	const r = dot( q, q ).toVar();
-	const core = exp( float(-4.5).mul( r ) ).mul( sub( 1., smoothstep( .52, 1., r ) ) ).toVar();
-	skyColor.assign( vec4( vColor.mul( vAlpha ).mul( core ).mul( 1.3 ), 1. ) );
-
-	return skyColor;
-
-}, { vColor: 'vec3', vAlpha: 'float', skyPixel: 'vec3', skyPointUV: 'vec2', return: 'vec4' } );
-
-return skyFragment(vColor,vAlpha,skyPixel,skyPointUV);})();
-return {vertex,fragment};
-}
-// 13: moon-world-Mesh
-export function material_f4599137(bind){
-const position=attribute('position','vec3'),normal=attribute('normal','vec3'),uv=attribute('uv','vec2');
-const projectionMatrix=cameraProjectionMatrix,viewMatrix=cameraViewMatrix,modelMatrix=modelWorldMatrix,modelViewMatrix=modelViewMatrixNode;
-const skyViewport=viewportSize,quadCorner=attribute('quadCorner','vec2'),skyPointUV=vec2(0),skyPixel=vec3(screenCoordinate.x,viewportSize.y.sub(screenCoordinate.y),0);
-const inverseProjection=bind("inverseProjection","mat4",0);
-const cameraWorld=bind("cameraWorld","mat4",0);
-const moonDirection=bind("moonDirection","vec3",0);
-const earthLight=bind("earthLight","vec3",0);
-const moonMap=bind("moonMap","sampler2D",0);
-const earthSpin=bind("earthSpin","float",0);
-const vRay=varying(vec3(),"sky_vRay");
-const vertex=(()=>{// Three.js Transpiler r186
-
-
-
-const skyVertex = /*@__PURE__*/ Fn( () => {
-
-	const skyPosition = vec4( 0. ).toVar();
-	const skyPointSize = float( 1. ).toVar();
-	const r = inverseProjection.mul( vec4( position.xy, 1., 1. ) ).toVar();
-	vRay.assign( mat3( cameraWorld ).mul( r.xyz ) );
-	skyPosition.assign( vec4( position.xy, 1., 1. ) );
-
-	return skyPosition;
-
-} );
-
-return skyVertex();})();
-const fragment=(()=>{// Three.js Transpiler r186
-
-
-
-const skyFragment = /*@__PURE__*/ Fn( ( [ vRay, skyPixel, skyPointUV ] ) => {
-
-	const skyColor = vec4( 0. ).toVar();
-	const d = normalize( vRay ).toVar();
-	const forward = dot( d, moonDirection ).toVar();
-
-	If( forward.lessThan( .994 ), () => {
-
-		Discard();
-
-	} );
-
-	const right = normalize( cross( moonDirection, vec3( 0., 1., 0. ) ) ).toVar();
-	const up = normalize( cross( right, moonDirection ) ).toVar();
-	const p = vec2( dot( d, right ), dot( d, up ) ).div( max( forward, .001 ) ).div( .078 ).toVar();
-	const r = length( p ).toVar();
-	const aa = max( fwidth( r ), .00025 ).toVar();
-
-	If( r.greaterThan( add( 1., aa ) ), () => {
-
-		Discard();
-
-	} );
-
-	const z = sqrt( max( 0., sub( 1., dot( p, p ) ) ) ).toVar();
-	const n = vec3( p, z ).toVar();
-	const tilt = float( .4091 ).toVar();
-	const mapped = vec3( n.x.mul( cos( tilt ) ).sub( n.y.mul( sin( tilt ) ) ), n.x.mul( sin( tilt ) ).add( n.y.mul( cos( tilt ) ) ), n.z ).toVar();
-	const uv = vec2( fract( add( .51, earthSpin ).add( atan( mapped.x, mapped.z ).div( 6.2831853 ) ) ), add( .5, asin( clamp( mapped.y, - 1., 1. ) ).div( 3.14159265 ) ) ).toVar();
-	const tex = moonMap.sample( uv ).rgb.toVar();
-	const lambert = dot( n, earthLight ).toVar();
-	const terminator = smoothstep( - .07, .09, lambert ).toVar();
-	const lit = tex.mul( add( .18, mul( .82, sqrt( max( lambert, 0. ) ) ) ) ).mul( terminator ).mul( 1.45 ).toVar();
-	const limb = pow( sub( 1., z ), 3.5 ).mul( smoothstep( - .12, .3, lambert ) ).toVar();
-	lit.addAssign( vec3( .055, .17, .37 ).mul( limb ) );
-	skyColor.assign( vec4( lit, sub( 1., smoothstep( sub( 1., aa ), add( 1., aa ), r ) ) ) );
-
-	return skyColor;
-
-}, { vRay: 'vec3', skyPixel: 'vec3', skyPointUV: 'vec2', return: 'vec4' } );
-
-return skyFragment(vRay,skyPixel,skyPointUV);})();
-return {vertex,fragment};
-}
-// 14: moon-world-Mesh
-export function material_f686ff0e(bind){
-const position=attribute('position','vec3'),normal=attribute('normal','vec3'),uv=attribute('uv','vec2');
-const projectionMatrix=cameraProjectionMatrix,viewMatrix=cameraViewMatrix,modelMatrix=modelWorldMatrix,modelViewMatrix=modelViewMatrixNode;
-const skyViewport=viewportSize,quadCorner=attribute('quadCorner','vec2'),skyPointUV=vec2(0),skyPixel=vec3(screenCoordinate.x,viewportSize.y.sub(screenCoordinate.y),0);
-const grain=bind("grain","sampler2D",0);
 const sun=bind("sun","vec3",0);
 const earth=bind("earth","vec3",0);
 const eye=bind("eye","vec3",0);
 const forward=bind("forward","vec3",0);
+const lampColor=bind("lampColor","vec3",0);
+const day=bind("day","float",0);
 const earthPower=bind("earthPower","float",0);
+const lunar=bind("lunar","float",0);
 const torch=bind("torch","float",0);
-const quality=bind("quality","float",0);
+const ghost=bind("ghost","float",0);
+const valid=bind("valid","float",0);
+const lampOn=bind("lampOn","float",0);
 const lampLeft=bind("lampLeft","vec3",0);
 const lampRight=bind("lampRight","vec3",0);
 const lampDirection=bind("lampDirection","vec3",0);
@@ -2881,6 +2767,7 @@ const vehicleSize=bind("vehicleSize","vec3",0);
 const lampMode=bind("lampMode","float",0);
 const vehicleHeading=bind("vehicleHeading","float",0);
 const reverseLight=bind("reverseLight","float",0);
+const shadowDetail=bind("shadowDetail","float",0);
 const rearLamp=bind("rearLamp","vec3",0);
 const rearDirection=bind("rearDirection","vec3",0);
 const vehicleInverse=bind("vehicleInverse","mat4",0);
@@ -2892,13 +2779,19 @@ const baseLightCount=bind("baseLightCount","int",0);
 const baseNodeCount=bind("baseNodeCount","int",0);
 const baseTree=bind("baseTree","sampler2D",0);
 const baseTreeSize=bind("baseTreeSize","vec2",0);
-const heightMap=bind("heightMap","sampler2D",0);
-const terrainLightCache=bind("terrainLightCache","sampler2D",0);
-const lightCacheOrigin=bind("lightCacheOrigin","vec2",0);
-const lightCacheReady=bind("lightCacheReady","float",0);
 const vWorld=varying(vec3(),"sky_vWorld");
 const vNormal=varying(vec3(),"sky_vNormal");
-const vertex=(()=>{// Three.js Transpiler r186
+const vPaint=varying(vec3(),"sky_vPaint");
+const vEmission=varying(float(),"sky_vEmission");
+const paint=attribute("paint","vec3");
+const emission=attribute("emission","float");
+const batch0=attribute("batch0","vec4");
+const batch1=attribute("batch1","vec4");
+const batch2=attribute("batch2","vec4");
+const batch3=attribute("batch3","vec4");
+const vertex=Fn(()=>{
+
+return (()=>{// Three.js Transpiler r186
 
 
 
@@ -2906,16 +2799,51 @@ const skyVertex = /*@__PURE__*/ Fn( () => {
 
 	const skyPosition = vec4( 0. ).toVar();
 	const skyPointSize = float( 1. ).toVar();
-	vWorld.assign( position );
-	vNormal.assign( normal );
-	skyPosition.assign( projectionMatrix.mul( modelViewMatrix ).mul( vec4( position, 1. ) ) );
+	vWorld.assign( batch0.xyz.mul( position.x ).add( batch1.xyz.mul( position.y ) ).add( batch2.xyz.mul( position.z ) ).add( batch3.xyz ) );
+	vNormal.assign( normalize( batch0.xyz.mul( normal.x ).add( batch1.xyz.mul( normal.y ) ).add( batch2.xyz.mul( normal.z ) ) ) );
+	vPaint.assign( paint );
+	vEmission.assign( emission );
+	skyPosition.assign( projectionMatrix.mul( viewMatrix ).mul( vec4( vWorld, 1. ) ) );
 
 	return skyPosition;
 
 } );
 
 return skyVertex();})();
-const fragment=(()=>{// Three.js Transpiler r186
+})();
+const fragment=Fn(()=>{
+sun.toStack();
+earth.toStack();
+eye.toStack();
+forward.toStack();
+lampColor.toStack();
+day.toStack();
+earthPower.toStack();
+lunar.toStack();
+torch.toStack();
+ghost.toStack();
+valid.toStack();
+lampOn.toStack();
+lampLeft.toStack();
+lampRight.toStack();
+lampDirection.toStack();
+vehicleCenter.toStack();
+vehicleSize.toStack();
+lampMode.toStack();
+reverseLight.toStack();
+shadowDetail.toStack();
+rearLamp.toStack();
+rearDirection.toStack();
+vehicleInverse.toStack();
+wheelShape.toStack();
+wheelOffsets.toStack();
+baseLights.element(0).toStack();
+baseColors.element(0).toStack();
+baseLightCount.toStack();
+baseNodeCount.toStack();
+baseTree.sample( vec2(0) ).toStack();
+baseTreeSize.toStack();
+return (()=>{// Three.js Transpiler r186
 
 
 
@@ -3036,6 +2964,13 @@ const vehicleOcclusion = /*@__PURE__*/ Fn( ( [ p, light ] ) => {
 	const inv = sign( d.add( vec3( .000001 ) ) ).div( max( abs( d ), vec3( .000001 ) ) ).toVar();
 	const hit = boxHit( o, inv, vec3( 0., .20, 0. ), vec3( vehicleSize.x, .19, vehicleSize.z ) ).toVar();
 	hit.assign( max( hit, boxHit( o, inv, vec3( 0., .73, .20 ), vec3( vehicleSize.x.mul( .82 ), .41, .38 ) ) ) );
+
+	If( shadowDetail.lessThan( .5 ), () => {
+
+		return mix( 1., .06, hit );
+
+	} );
+
 	hit.assign( max( hit, wheelHit( o, d, vec3( wheelShape.x.negate(), wheelOffsets.x, wheelShape.y.negate() ) ) ) );
 	hit.assign( max( hit, wheelHit( o, d, vec3( wheelShape.x.negate(), wheelOffsets.y, wheelShape.y ) ) ) );
 	hit.assign( max( hit, wheelHit( o, d, vec3( wheelShape.x, wheelOffsets.z, wheelShape.y.negate() ) ) ) );
@@ -3071,6 +3006,52 @@ const baseInverse = /*@__PURE__*/ Fn( ( [ d ] ) => {
 	return div( 1., mix( vec3( - 1. ), vec3( 1. ), step( vec3( 0. ), d ) ).mul( max( abs( d ), vec3( .000001 ) ) ) );
 
 }, { d: 'vec3', return: 'vec3' } );
+
+const dishRoot = /*@__PURE__*/ Fn( ( [ p, d, t, radius, limit ] ) => {
+
+	const q = p.xy.add( d.xy.mul( t ) ).toVar();
+
+	return t.greaterThan( .004 ).and( t.lessThan( limit ) ).and( dot( q, q ).lessThanEqual( radius.mul( radius ) ) );
+
+}, { p: 'vec3', d: 'vec3', t: 'float', radius: 'float', limit: 'float', return: 'bool' } );
+
+const dishSurface = /*@__PURE__*/ Fn( ( [ p, d, radius, curve, depth, limit ] ) => {
+
+	const a = curve.mul( dot( d.xy, d.xy ) ).toVar();
+	const b = d.z.add( mul( 2., curve ).mul( dot( p.xy, d.xy ) ) ).toVar();
+	const c = p.z.add( curve.mul( dot( p.xy, p.xy ) ) ).sub( depth ).toVar();
+	const hit = bool( false ).toVar();
+
+	If( abs( a ).lessThan( .0000001 ), () => {
+
+		If( abs( b ).greaterThanEqual( .0000001 ), () => {
+
+			hit.assign( dishRoot( p, d, c.negate().div( b ), radius, limit ) );
+
+		} );
+
+	} ).Else( () => {
+
+		const h = b.mul( b ).sub( mul( 4., a ).mul( c ) ).toVar();
+
+		If( h.greaterThanEqual( 0. ), () => {
+
+			const root = sqrt( h ).toVar();
+			hit.assign( dishRoot( p, d, b.negate().sub( root ).div( mul( 2., a ) ), radius, limit ).or( dishRoot( p, d, b.negate().add( root ).div( mul( 2., a ) ), radius, limit ) ) );
+
+		} );
+
+	} );
+
+	return hit;
+
+}, { p: 'vec3', d: 'vec3', radius: 'float', curve: 'float', depth: 'float', limit: 'float', return: 'bool' } );
+
+const dishHit = /*@__PURE__*/ Fn( ( [ p, d, shape, limit ] ) => {
+
+	return dishSurface( p, d, shape.x, shape.y, 0., limit ).or( dishSurface( p, d, shape.x, shape.y, shape.z, limit ) );
+
+}, { p: 'vec3', d: 'vec3', shape: 'vec3', limit: 'float', return: 'bool' } );
 
 const baseVisibility = /*@__PURE__*/ Fn( ( [ p, dir, limit ] ) => {
 
@@ -3108,6 +3089,12 @@ const baseVisibility = /*@__PURE__*/ Fn( ( [ p, dir, limit ] ) => {
 
 		} );
 
+		If( hi.w.lessThan( 1.5 ), () => {
+
+			return 0.;
+
+		} );
+
 		const center = baseNode( index, 2. ).toVar();
 		const x = baseNode( index, 3. ).toVar();
 		const y = baseNode( index, 4. ).toVar();
@@ -3116,8 +3103,19 @@ const baseVisibility = /*@__PURE__*/ Fn( ( [ p, dir, limit ] ) => {
 		const localP = vec3( dot( delta, x.xyz ), dot( delta, y.xyz ), dot( delta, z ) ).toVar();
 		const localD = vec3( dot( dir, x.xyz ), dot( dir, y.xyz ), dot( dir, z ) ).toVar();
 		const halfSize = vec3( center.w, x.w, y.w ).toVar();
+		const blocked = bool( false ).toVar();
 
-		If( baseSlab( localP, baseInverse( localD ), halfSize.negate(), halfSize, limit ), () => {
+		If( hi.w.greaterThan( 2.5 ), () => {
+
+			blocked.assign( dishHit( localP, localD, halfSize, limit ) );
+
+		} ).Else( () => {
+
+			blocked.assign( baseSlab( localP, baseInverse( localD ), halfSize.negate(), halfSize, limit ) );
+
+		} );
+
+		If( blocked, () => {
 
 			return 0.;
 
@@ -3153,12 +3151,914 @@ const baseLighting = /*@__PURE__*/ Fn( ( [ p, n ] ) => {
 		} );
 
 		const d = baseLights.element( i ).xyz.sub( p ).toVar();
-		const len = length( d ).toVar();
-		const fall = max( 0., sub( 1., len.div( baseLights.element( i ).w ) ) ).toVar();
+		const squared = dot( d, d ).toVar();
+		const range = baseLights.element( i ).w.toVar();
+
+		If( squared.greaterThanEqual( range.mul( range ) ), () => {
+
+			Continue();
+
+		} );
+
+		const len = sqrt( squared ).toVar();
+		const fall = sub( 1., len.div( range ) ).toVar();
+		const direction = d.div( max( len, .001 ) ).toVar();
 
 		If( fall.greaterThan( .001 ), () => {
 
-			light.addAssign( baseColors.element( i ).rgb.mul( baseColors.element( i ).a ).mul( fall ).mul( fall ).mul( add( .18, mul( .82, max( dot( n, d.div( max( len, .001 ) ) ), 0. ) ) ) ).mul( baseVisibility( p.add( n.mul( .012 ) ), d.div( max( len, .001 ) ), len.sub( .10 ) ) ) );
+			light.addAssign( baseColors.element( i ).rgb.mul( baseColors.element( i ).a ).mul( fall ).mul( fall ).mul( add( .18, mul( .82, max( dot( n, direction ), 0. ) ) ) ).mul( baseVisibility( p.add( n.mul( .012 ) ), direction, len.sub( .10 ) ) ) );
+
+		} );
+
+	} );
+
+	return light;
+
+}, { p: 'vec3', n: 'vec3', return: 'vec3' } );
+
+const skyFragment = /*@__PURE__*/ Fn( ( [ vWorld, vNormal, vPaint, vEmission, skyPixel, skyPointUV ] ) => {
+
+	const skyColor = vec4( 0. ).toVar();
+
+	If( ghost.greaterThan( .5 ), () => {
+
+		const tint = mix( vec3( .95, .38, .28 ), vec3( .51, .89, .82 ), valid ).toVar();
+		const edge = pow( sub( 1., abs( dot( normalize( vNormal ), normalize( eye.sub( vWorld ) ) ) ) ), 2. ).toVar();
+		skyColor.assign( vec4( tint, add( .22, edge.mul( .30 ) ) ) );
+
+		return skyColor;
+
+	} );
+
+	const n = normalize( vNormal ).toVar();
+	const p = vWorld.add( n.mul( .025 ) ).toVar();
+	const solar = float( 0. ).toVar();
+
+	If( sun.y.greaterThan( 0. ), () => {
+
+		solar.assign( max( 0., dot( n, sun ) ) );
+
+	} );
+
+	const light = mix( vec3( .013, .018, .025 ).add( vec3( .17 ).mul( day ) ), vec3( .00004 ), lunar ).toVar();
+
+	If( solar.greaterThan( .001 ), () => {
+
+		light.addAssign( vec3( 1., .96, .88 ).mul( solar ).mul( mix( day.mul( .8 ), 1.35, lunar ) ).mul( baseVisibility( p, sun, 2000. ) ).mul( vehicleOcclusion( p, sun ) ) );
+
+	} );
+
+	const earthLit = max( 0., dot( n, earth ) ).toVar();
+
+	If( earthPower.greaterThan( .0001 ).and( earthLit.greaterThan( .001 ) ), () => {
+
+		light.addAssign( vec3( .46, .63, 1. ).mul( earthLit ).mul( earthPower ).mul( baseVisibility( p, earth, 2000. ) ) );
+
+	} );
+
+	If( torch.greaterThan( .001 ), () => {
+
+		const beam = flashlightBeam( vWorld.sub( eye ), forward ).mul( torch ).toVar();
+
+		If( beam.greaterThan( .001 ), () => {
+
+			light.addAssign( vec3( .92, .96, 1. ).mul( beam ).mul( add( .1, mul( .9, max( dot( n, normalize( eye.sub( vWorld ) ) ), 0. ) ) ) ).mul( basePointVisibility( vWorld, n, eye ) ) );
+
+		} );
+
+	} );
+
+	If( lampMode.greaterThan( .001 ), () => {
+
+		const l = headlightBeam( vWorld.sub( lampLeft ) ).toVar();
+		const r = headlightBeam( vWorld.sub( lampRight ) ).toVar();
+
+		If( l.greaterThan( .001 ), () => {
+
+			light.addAssign( vec3( .92, .96, 1. ).mul( l ).mul( max( .15, dot( n, normalize( lampLeft.sub( vWorld ) ) ) ) ).mul( basePointVisibility( vWorld, n, lampLeft ) ) );
+
+		} );
+
+		If( r.greaterThan( .001 ), () => {
+
+			light.addAssign( vec3( .92, .96, 1. ).mul( r ).mul( max( .15, dot( n, normalize( lampRight.sub( vWorld ) ) ) ) ).mul( basePointVisibility( vWorld, n, lampRight ) ) );
+
+		} );
+
+	} );
+
+	const rear = rearBeam( vWorld ).toVar();
+
+	If( rear.greaterThan( .001 ), () => {
+
+		light.addAssign( vec3( 1., .009, .002 ).mul( rear ).mul( basePointVisibility( vWorld, n, rearLamp ) ) );
+
+	} );
+
+	light.addAssign( baseLighting( vWorld, n ) );
+	const color = vPaint.mul( light ).toVar();
+
+	If( vEmission.greaterThan( 0. ), () => {
+
+		color.addAssign( lampColor.mul( vEmission ).mul( lampOn ) );
+
+	} );
+
+	If( vEmission.lessThan( 0. ), () => {
+
+		color.addAssign( vPaint.mul( vEmission.negate() ).mul( .32 ) );
+
+	} );
+
+	skyColor.assign( vec4( pow( max( color, vec3( 0. ) ), vec3( 1. / 2.2 ) ), 1. ) );
+
+	return skyColor;
+
+}, { vWorld: 'vec3', vNormal: 'vec3', vPaint: 'vec3', vEmission: 'float', skyPixel: 'vec3', skyPointUV: 'vec2', return: 'vec4' } );
+
+return skyFragment(vWorld,vNormal,vPaint,vEmission,skyPixel,skyPointUV);})();
+})();
+return {vertex,fragment};
+}
+// 10: moon Mesh
+export function material_2071ba81(bind){
+const position=attribute('position','vec3'),normal=attribute('normal','vec3'),uv=attribute('uv','vec2');
+const projectionMatrix=cameraProjectionMatrix,viewMatrix=cameraViewMatrix,modelMatrix=modelWorldMatrix,modelViewMatrix=modelViewMatrixNode;
+const skyViewport=viewportSize,quadCorner=attribute('quadCorner','vec2'),skyPointUV=vec2(0),skyPixel=vec3(screenCoordinate.x,viewportSize.y.sub(screenCoordinate.y),0);
+const inverseProjection=bind("inverseProjection","mat4",0);
+const cameraWorld=bind("cameraWorld","mat4",0);
+const sunDirection=bind("sunDirection","vec3",0);
+const solarVisible=bind("solarVisible","float",0);
+const solarGlare=bind("solarGlare","float",0);
+const vRay=varying(vec3(),"sky_vRay");
+const vertex=Fn(()=>{
+inverseProjection.toStack();
+cameraWorld.toStack();
+return (()=>{// Three.js Transpiler r186
+
+
+
+const skyVertex = /*@__PURE__*/ Fn( () => {
+
+	const skyPosition = vec4( 0. ).toVar();
+	const skyPointSize = float( 1. ).toVar();
+	const r = inverseProjection.mul( vec4( position.xy, 1., 1. ) ).toVar();
+	vRay.assign( mat3( cameraWorld ).mul( r.xyz ) );
+	skyPosition.assign( vec4( position.xy, 1., 1. ) );
+
+	return skyPosition;
+
+} );
+
+return skyVertex();})();
+})();
+const fragment=Fn(()=>{
+sunDirection.toStack();
+solarGlare.toStack();
+return (()=>{// Three.js Transpiler r186
+
+
+
+const skyFragment = /*@__PURE__*/ Fn( ( [ vRay, skyPixel, skyPointUV ] ) => {
+
+	const skyColor = vec4( 0. ).toVar();
+	const d = normalize( vRay ).toVar();
+	const a = atan( length( cross( d, sunDirection ) ), dot( d, sunDirection ) ).toVar();
+	const aa = max( fwidth( a ), .000018 ).toVar();
+	const disk = sub( 1., smoothstep( sub( .0285, aa ), add( .035, aa ), a ) ).toVar();
+	const glow = float( 0. ).toVar();
+
+	If( solarGlare.greaterThan( .000001 ), () => {
+
+		glow.assign( exp( pow( a.div( .19 ), 1.65 ).negate() ).mul( .20 ).add( exp( a.negate().mul( 20. ) ).mul( .55 ) ).add( exp( a.negate().mul( 65. ) ).mul( .45 ) ) );
+
+	} );
+
+	const color = vec3( 1., .985, .95 ).mul( disk.mul( 2.2 ).add( glow.mul( solarGlare ) ) ).toVar();
+	skyColor.assign( vec4( color, 1. ) );
+
+	return skyColor;
+
+}, { vRay: 'vec3', skyPixel: 'vec3', skyPointUV: 'vec2', return: 'vec4' } );
+
+return skyFragment(vRay,skyPixel,skyPointUV);})();
+})();
+return {vertex,fragment};
+}
+// 11: moon Mesh
+export function material_3b1f22dc(bind){
+const position=attribute('position','vec3'),normal=attribute('normal','vec3'),uv=attribute('uv','vec2');
+const projectionMatrix=cameraProjectionMatrix,viewMatrix=cameraViewMatrix,modelMatrix=modelWorldMatrix,modelViewMatrix=modelViewMatrixNode;
+const skyViewport=viewportSize,quadCorner=attribute('quadCorner','vec2'),skyPointUV=vec2(0),skyPixel=vec3(screenCoordinate.x,viewportSize.y.sub(screenCoordinate.y),0);
+const inverseProjection=bind("inverseProjection","mat4",0);
+const cameraWorld=bind("cameraWorld","mat4",0);
+const galacticNormal=bind("galacticNormal","vec3",0);
+const galacticCenter=bind("galacticCenter","vec3",0);
+const galacticTangent=bind("galacticTangent","vec3",0);
+const night=bind("night","float",0);
+const moonlight=bind("moonlight","float",0);
+const milkyOn=bind("milkyOn","float",0);
+const skyDetail=bind("skyDetail","float",0);
+const vRay=varying(vec3(),"sky_vRay");
+const vertex=Fn(()=>{
+inverseProjection.toStack();
+cameraWorld.toStack();
+return (()=>{// Three.js Transpiler r186
+
+
+
+const skyVertex = /*@__PURE__*/ Fn( () => {
+
+	const skyPosition = vec4( 0. ).toVar();
+	const skyPointSize = float( 1. ).toVar();
+	const r = inverseProjection.mul( vec4( position.xy, 1., 1. ) ).toVar();
+	vRay.assign( mat3( cameraWorld ).mul( r.xyz ) );
+	skyPosition.assign( vec4( position.xy, 1., 1. ) );
+
+	return skyPosition;
+
+} );
+
+return skyVertex();})();
+})();
+const fragment=Fn(()=>{
+galacticNormal.toStack();
+galacticCenter.toStack();
+galacticTangent.toStack();
+night.toStack();
+milkyOn.toStack();
+skyDetail.toStack();
+return (()=>{// Three.js Transpiler r186
+
+
+
+const hash = /*@__PURE__*/ Fn( ( [ p_immutable ] ) => {
+
+	const p = p_immutable.toVar();
+	p.assign( fract( p.mul( .3183099 ).add( vec3( .11, .37, .71 ) ) ) );
+	p.mulAssign( 17. );
+
+	return fract( p.x.mul( p.y ).mul( p.z ).mul( p.x.add( p.y ).add( p.z ) ) );
+
+}, { p: 'vec3', return: 'float' } );
+
+const noise3 = /*@__PURE__*/ Fn( ( [ p ] ) => {
+
+	const i = floor( p ).toVar();
+	const f = fract( p ).toVar();
+	f.assign( f.mul( f ).mul( sub( 3., mul( 2., f ) ) ) );
+
+	return mix( mix( mix( hash( i ), hash( i.add( vec3( 1, 0, 0 ) ) ), f.x ), mix( hash( i.add( vec3( 0, 1, 0 ) ) ), hash( i.add( vec3( 1, 1, 0 ) ) ), f.x ), f.y ), mix( mix( hash( i.add( vec3( 0, 0, 1 ) ) ), hash( i.add( vec3( 1, 0, 1 ) ) ), f.x ), mix( hash( i.add( vec3( 0, 1, 1 ) ) ), hash( i.add( vec3( 1, 1, 1 ) ) ), f.x ), f.y ), f.z );
+
+}, { p: 'vec3', return: 'float' } );
+
+const fbm = /*@__PURE__*/ Fn( ( [ p ] ) => {
+
+	const clouds = mul( .52, noise3( p ) ).add( mul( .27, noise3( p.mul( 2.07 ).add( 4.3 ) ) ) ).toVar();
+
+	If( skyDetail.greaterThan( .5 ), () => {
+
+		clouds.addAssign( mul( .14, noise3( p.mul( 4.13 ).add( 12.7 ) ) ).add( mul( .07, noise3( p.mul( 8.19 ) ) ) ) );
+
+	} );
+
+	return clouds;
+
+}, { p: 'vec3', return: 'float' } );
+
+const skyFragment = /*@__PURE__*/ Fn( ( [ vRay, skyPixel, skyPointUV ] ) => {
+
+	const skyColor = vec4( 0. ).toVar();
+	const d = normalize( vRay ).toVar();
+	const lat = dot( d, galacticNormal ).toVar();
+	const g = vec3( dot( d, galacticCenter ), lat, dot( d, galacticTangent ) ).toVar();
+	const clouds = fbm( g.mul( vec3( 8., 17., 10. ) ).add( vec3( 3.1, 7.4, 1.2 ) ) ).toVar();
+	const knots = float( .5 ).toVar();
+	const fine = float( .5 ).toVar();
+
+	If( skyDetail.greaterThan( .5 ), () => {
+
+		knots.assign( noise3( g.mul( 32. ).add( vec3( 9.2, 1.8, 4. ) ) ) );
+		fine.assign( noise3( g.mul( 83. ).add( vec3( 4.7, 12., 6. ) ) ) );
+
+	} );
+
+	const central = pow( max( 0., g.x ), 6. ).toVar();
+	const arm = add( .40, mul( .36, noise3( vec3( g.x.mul( 4. ), g.z.mul( 4. ), 2.8 ) ) ) ).add( mul( .38, central ) ).toVar();
+	const bend = mul( .022, sin( g.z.mul( 5. ).add( g.x.mul( 2. ) ) ) ).add( clouds.sub( .5 ).mul( .065 ) ).toVar();
+	const width = add( .052, mul( .040, clouds ) ).add( mul( .083, central ) ).toVar();
+	const band = exp( pow( lat.add( bend ).div( width ), 2. ).negate() ).toVar();
+	const bulge = exp( pow( lat.add( .025 ).div( add( .12, mul( .055, central ) ) ), 2. ).negate() ).mul( central ).toVar();
+	const ridge = add( .021, mul( .033, sin( g.z.mul( 4. ).sub( g.x.mul( 2. ) ) ) ) ).add( clouds.sub( .5 ).mul( .05 ) ).toVar();
+	const rift = exp( pow( lat.add( ridge ).div( add( .011, mul( .023, knots ) ) ), 2. ).negate() ).toVar();
+	const riftMask = smoothstep( - .5, .6, g.x ).mul( add( .35, mul( .65, knots ) ) ).toVar();
+	const branch = exp( pow( lat.sub( .055 ).add( g.z.mul( .047 ) ).add( knots.sub( .5 ).mul( .027 ) ).div( .018 ), 2. ).negate() ).mul( central ).toVar();
+	const texture = add( .22, mul( .95, smoothstep( .24, .79, clouds ) ) ).add( mul( .16, knots ) ).add( mul( .07, fine ) ).toVar();
+	const dust = band.mul( arm ).mul( texture ).add( bulge.mul( .30 ) ).mul( sub( 1., rift.mul( riftMask ).mul( .89 ) ) ).mul( sub( 1., branch.mul( .60 ) ) ).toVar();
+	const veil = night.mul( milkyOn ).toVar();
+	const color = mix( vec3( .053, .065, .078 ), vec3( .104, .089, .069 ), central.mul( .82 ) ).toVar();
+	skyColor.assign( vec4( color.mul( dust ).mul( veil ).mul( 3.35 ), 1. ) );
+
+	return skyColor;
+
+}, { vRay: 'vec3', skyPixel: 'vec3', skyPointUV: 'vec2', return: 'vec4' } );
+
+return skyFragment(vRay,skyPixel,skyPointUV);})();
+})();
+return {vertex,fragment};
+}
+// 12: moon Points
+export function material_8841ef08(bind){
+const position=attribute('position','vec3'),normal=attribute('normal','vec3'),uv=attribute('uv','vec2');
+const projectionMatrix=cameraProjectionMatrix,viewMatrix=cameraViewMatrix,modelMatrix=modelWorldMatrix,modelViewMatrix=modelViewMatrixNode;
+const skyViewport=viewportSize,quadCorner=attribute('quadCorner','vec2'),skyPointUV=vec2(uv.x,uv.y.oneMinus()),skyPixel=vec3(screenCoordinate.x,viewportSize.y.sub(screenCoordinate.y),0);
+const field=bind("field","mat4",0);
+const moonDirection=bind("moonDirection","vec3",0);
+const night=bind("night","float",0);
+const starLimit=bind("starLimit","float",0);
+const pixelRatio=bind("pixelRatio","float",0);
+const zoomReveal=bind("zoomReveal","float",0);
+const earthIllumination=bind("earthIllumination","float",0);
+const vColor=varying(vec3(),"sky_vColor");
+const vAlpha=varying(float(),"sky_vAlpha");
+const magnitude=attribute("magnitude","float");
+const seed=attribute("seed","float");
+const starColor=attribute("starColor","vec3");
+const vertex=Fn(()=>{
+field.toStack();
+moonDirection.toStack();
+night.toStack();
+starLimit.toStack();
+pixelRatio.toStack();
+zoomReveal.toStack();
+earthIllumination.toStack();
+return (()=>{// Three.js Transpiler r186
+
+
+
+const skyVertex = /*@__PURE__*/ Fn( () => {
+
+	const skyPosition = vec4( 0. ).toVar();
+	const skyPointSize = float( 1. ).toVar();
+	const dir = mat3( field ).mul( position ).toVar();
+	const vd = mat3( viewMatrix ).mul( dir ).toVar();
+	const p = projectionMatrix.mul( vec4( vd, 1. ) ).toVar();
+	skyPosition.assign( select( p.w.greaterThan( 0. ), vec4( p.xy, p.w.mul( .99999 ), p.w ), vec4( 2., 2., 2., 1. ) ) );
+	const visible = sub( 1., smoothstep( starLimit.sub( .5 ), starLimit.add( .22 ), magnitude ) ).toVar();
+
+	If( visible.mul( night ).lessThan( .0001 ).or( p.w.lessThanEqual( 0. ) ), () => {
+
+		skyPosition.assign( vec4( 2., 2., 2., 1. ) );
+		skyPointSize.assign( 1. );
+		vAlpha.assign( 0. );
+		vColor.assign( vec3( 0. ) );
+
+	} ).Else( () => {
+
+		const faint = smoothstep( 4.8, 8., magnitude ).toVar();
+		const strength = clamp( pow( 10., float(-.145).mul( magnitude.sub( 1. ) ) ), .14, 1.55 ).mul( 1.22 ).add( faint.mul( zoomReveal ).mul( .62 ) ).toVar();
+		const angle = length( dir.sub( moonDirection ) ).toVar();
+		const localGlare = sub( 1., exp( angle.negate().mul( 6. ) ).mul( earthIllumination ).mul( .9 ) ).toVar();
+		skyPointSize.assign( add( 1.95, clamp( sub( 5.4, magnitude ), 0., 6. ).mul( .47 ) ).add( zoomReveal.mul( add( .8, faint.mul( .4 ) ) ) ).mul( pixelRatio ) );
+		vAlpha.assign( visible.mul( strength ).mul( night ).mul( localGlare ) );
+		vColor.assign( starColor );
+
+	} );
+
+	skyPosition.xy.addAssign( quadCorner.mul( skyPointSize ).div( skyViewport ).mul( skyPosition.w ) );
+
+	return skyPosition;
+
+} );
+
+return skyVertex();})();
+})();
+const fragment=Fn(()=>{
+
+return (()=>{// Three.js Transpiler r186
+
+
+
+const skyFragment = /*@__PURE__*/ Fn( ( [ vColor, vAlpha, skyPixel, skyPointUV ] ) => {
+
+	const skyColor = vec4( 0. ).toVar();
+	const q = skyPointUV.mul( 2. ).sub( 1. ).toVar();
+	const r = dot( q, q ).toVar();
+	const core = exp( float(-4.5).mul( r ) ).mul( sub( 1., smoothstep( .52, 1., r ) ) ).toVar();
+	skyColor.assign( vec4( vColor.mul( vAlpha ).mul( core ).mul( 1.3 ), 1. ) );
+
+	return skyColor;
+
+}, { vColor: 'vec3', vAlpha: 'float', skyPixel: 'vec3', skyPointUV: 'vec2', return: 'vec4' } );
+
+return skyFragment(vColor,vAlpha,skyPixel,skyPointUV);})();
+})();
+return {vertex,fragment};
+}
+// 13: moon Mesh
+export function material_f4599137(bind){
+const position=attribute('position','vec3'),normal=attribute('normal','vec3'),uv=attribute('uv','vec2');
+const projectionMatrix=cameraProjectionMatrix,viewMatrix=cameraViewMatrix,modelMatrix=modelWorldMatrix,modelViewMatrix=modelViewMatrixNode;
+const skyViewport=viewportSize,quadCorner=attribute('quadCorner','vec2'),skyPointUV=vec2(0),skyPixel=vec3(screenCoordinate.x,viewportSize.y.sub(screenCoordinate.y),0);
+const inverseProjection=bind("inverseProjection","mat4",0);
+const cameraWorld=bind("cameraWorld","mat4",0);
+const moonDirection=bind("moonDirection","vec3",0);
+const earthLight=bind("earthLight","vec3",0);
+const moonMap=bind("moonMap","sampler2D",0);
+const earthSpin=bind("earthSpin","float",0);
+const vRay=varying(vec3(),"sky_vRay");
+const vertex=Fn(()=>{
+inverseProjection.toStack();
+cameraWorld.toStack();
+return (()=>{// Three.js Transpiler r186
+
+
+
+const skyVertex = /*@__PURE__*/ Fn( () => {
+
+	const skyPosition = vec4( 0. ).toVar();
+	const skyPointSize = float( 1. ).toVar();
+	const r = inverseProjection.mul( vec4( position.xy, 1., 1. ) ).toVar();
+	vRay.assign( mat3( cameraWorld ).mul( r.xyz ) );
+	skyPosition.assign( vec4( position.xy, 1., 1. ) );
+
+	return skyPosition;
+
+} );
+
+return skyVertex();})();
+})();
+const fragment=Fn(()=>{
+moonDirection.toStack();
+earthLight.toStack();
+moonMap.sample( vec2(0) ).toStack();
+earthSpin.toStack();
+return (()=>{// Three.js Transpiler r186
+
+
+
+const skyFragment = /*@__PURE__*/ Fn( ( [ vRay, skyPixel, skyPointUV ] ) => {
+
+	const skyColor = vec4( 0. ).toVar();
+	const d = normalize( vRay ).toVar();
+	const forward = dot( d, moonDirection ).toVar();
+
+	If( forward.lessThan( .994 ), () => {
+
+		Discard();
+
+	} );
+
+	const right = normalize( cross( moonDirection, vec3( 0., 1., 0. ) ) ).toVar();
+	const up = normalize( cross( right, moonDirection ) ).toVar();
+	const p = vec2( dot( d, right ), dot( d, up ) ).div( max( forward, .001 ) ).div( .078 ).toVar();
+	const r = length( p ).toVar();
+	const aa = max( fwidth( r ), .00025 ).toVar();
+
+	If( r.greaterThan( add( 1., aa ) ), () => {
+
+		Discard();
+
+	} );
+
+	const z = sqrt( max( 0., sub( 1., dot( p, p ) ) ) ).toVar();
+	const n = vec3( p, z ).toVar();
+	const tilt = float( .4091 ).toVar();
+	const mapped = vec3( n.x.mul( cos( tilt ) ).sub( n.y.mul( sin( tilt ) ) ), n.x.mul( sin( tilt ) ).add( n.y.mul( cos( tilt ) ) ), n.z ).toVar();
+	const uv = vec2( fract( add( .51, earthSpin ).add( atan( mapped.x, mapped.z ).div( 6.2831853 ) ) ), add( .5, asin( clamp( mapped.y, - 1., 1. ) ).div( 3.14159265 ) ) ).toVar();
+	const tex = moonMap.sample( uv ).rgb.toVar();
+	const lambert = dot( n, earthLight ).toVar();
+	const terminator = smoothstep( - .07, .09, lambert ).toVar();
+	const lit = tex.mul( add( .18, mul( .82, sqrt( max( lambert, 0. ) ) ) ) ).mul( terminator ).mul( 1.45 ).toVar();
+	const limb = pow( sub( 1., z ), 3.5 ).mul( smoothstep( - .12, .3, lambert ) ).toVar();
+	lit.addAssign( vec3( .055, .17, .37 ).mul( limb ) );
+	skyColor.assign( vec4( lit, sub( 1., smoothstep( sub( 1., aa ), add( 1., aa ), r ) ) ) );
+
+	return skyColor;
+
+}, { vRay: 'vec3', skyPixel: 'vec3', skyPointUV: 'vec2', return: 'vec4' } );
+
+return skyFragment(vRay,skyPixel,skyPointUV);})();
+})();
+return {vertex,fragment};
+}
+// 14: moon Mesh
+export function material_d442da71(bind){
+const position=attribute('position','vec3'),normal=attribute('normal','vec3'),uv=attribute('uv','vec2');
+const projectionMatrix=cameraProjectionMatrix,viewMatrix=cameraViewMatrix,modelMatrix=modelWorldMatrix,modelViewMatrix=modelViewMatrixNode;
+const skyViewport=viewportSize,quadCorner=attribute('quadCorner','vec2'),skyPointUV=vec2(0),skyPixel=vec3(screenCoordinate.x,viewportSize.y.sub(screenCoordinate.y),0);
+const grain=bind("grain","sampler2D",0);
+const sun=bind("sun","vec3",0);
+const earth=bind("earth","vec3",0);
+const eye=bind("eye","vec3",0);
+const forward=bind("forward","vec3",0);
+const earthPower=bind("earthPower","float",0);
+const torch=bind("torch","float",0);
+const quality=bind("quality","float",0);
+const lampLeft=bind("lampLeft","vec3",0);
+const lampRight=bind("lampRight","vec3",0);
+const lampDirection=bind("lampDirection","vec3",0);
+const vehicleCenter=bind("vehicleCenter","vec3",0);
+const vehicleSize=bind("vehicleSize","vec3",0);
+const lampMode=bind("lampMode","float",0);
+const vehicleHeading=bind("vehicleHeading","float",0);
+const reverseLight=bind("reverseLight","float",0);
+const shadowDetail=bind("shadowDetail","float",0);
+const rearLamp=bind("rearLamp","vec3",0);
+const rearDirection=bind("rearDirection","vec3",0);
+const vehicleInverse=bind("vehicleInverse","mat4",0);
+const wheelShape=bind("wheelShape","vec4",0);
+const wheelOffsets=bind("wheelOffsets","vec4",0);
+const baseLights=bind("baseLights","vec4",4);
+const baseColors=bind("baseColors","vec4",4);
+const baseLightCount=bind("baseLightCount","int",0);
+const baseNodeCount=bind("baseNodeCount","int",0);
+const baseTree=bind("baseTree","sampler2D",0);
+const baseTreeSize=bind("baseTreeSize","vec2",0);
+const heightMap=bind("heightMap","sampler2D",0);
+const terrainShadowDetail=bind("terrainShadowDetail","float",0);
+const terrainLightCache=bind("terrainLightCache","sampler2D",0);
+const lightCacheOrigin=bind("lightCacheOrigin","vec2",0);
+const lightCacheReady=bind("lightCacheReady","float",0);
+const vWorld=varying(vec3(),"sky_vWorld");
+const vNormal=varying(vec3(),"sky_vNormal");
+const vertex=Fn(()=>{
+
+return (()=>{// Three.js Transpiler r186
+
+
+
+const skyVertex = /*@__PURE__*/ Fn( () => {
+
+	const skyPosition = vec4( 0. ).toVar();
+	const skyPointSize = float( 1. ).toVar();
+	vWorld.assign( position );
+	vNormal.assign( normal );
+	skyPosition.assign( projectionMatrix.mul( modelViewMatrix ).mul( vec4( position, 1. ) ) );
+
+	return skyPosition;
+
+} );
+
+return skyVertex();})();
+})();
+const fragment=Fn(()=>{
+grain.sample( vec2(0) ).toStack();
+sun.toStack();
+earth.toStack();
+eye.toStack();
+forward.toStack();
+earthPower.toStack();
+torch.toStack();
+quality.toStack();
+lampLeft.toStack();
+lampRight.toStack();
+lampDirection.toStack();
+vehicleCenter.toStack();
+vehicleSize.toStack();
+lampMode.toStack();
+reverseLight.toStack();
+shadowDetail.toStack();
+rearLamp.toStack();
+rearDirection.toStack();
+vehicleInverse.toStack();
+wheelShape.toStack();
+wheelOffsets.toStack();
+baseLights.element(0).toStack();
+baseColors.element(0).toStack();
+baseLightCount.toStack();
+baseNodeCount.toStack();
+baseTree.sample( vec2(0) ).toStack();
+baseTreeSize.toStack();
+heightMap.sample( vec2(0) ).toStack();
+terrainShadowDetail.toStack();
+terrainLightCache.sample( vec2(0) ).toStack();
+lightCacheOrigin.toStack();
+lightCacheReady.toStack();
+return (()=>{// Three.js Transpiler r186
+
+
+
+const flashlightBeam = /*@__PURE__*/ Fn( ( [ fromLamp, direction ] ) => {
+
+	const len = length( fromLamp ).toVar();
+	const aim = dot( fromLamp.div( max( len, .001 ) ), direction ).toVar();
+
+	If( aim.lessThanEqual( 0. ).or( len.greaterThanEqual( 100. ) ), () => {
+
+		return 0.;
+
+	} );
+
+	const radial = sqrt( max( 0., sub( 1., aim.mul( aim ) ) ) ).div( max( aim, .001 ) ).div( 1.08 ).toVar();
+	const central = sub( 1., smoothstep( .49, .75, radial ) ).toVar();
+	const ring = exp( pow( radial.sub( .82 ).div( .055 ), 2. ).negate() ).mul( .16 ).toVar();
+	const spill = sub( 1., smoothstep( .79, 1.03, radial ) ).mul( .15 ).toVar();
+
+	return central.add( ring ).add( spill ).mul( smoothstep( 0., .08, aim ) ).mul( sub( 1., smoothstep( 75., 100., len ) ) ).mul( 2.8 ).div( add( 1., len.mul( len ).div( 170. ) ) );
+
+}, { fromLamp: 'vec3', direction: 'vec3', return: 'float' } );
+
+const headlightBeam = /*@__PURE__*/ Fn( ( [ delta ] ) => {
+
+	If( lampMode.lessThan( .001 ), () => {
+
+		return 0.;
+
+	} );
+
+	const len = length( delta ).toVar();
+	const aim = dot( delta.div( max( len, .001 ) ), lampDirection ).toVar();
+
+	If( aim.lessThanEqual( 0. ), () => {
+
+		return 0.;
+
+	} );
+
+	const high = clamp( lampMode.sub( 1. ), 0., 1. ).toVar();
+	const range = mix( 65., 125., high ).toVar();
+	const radial = sqrt( max( 0., sub( 1., aim.mul( aim ) ) ) ).div( max( aim, .001 ) ).toVar();
+	const cone = sub( 1., smoothstep( mix( .32, .20, high ), mix( .68, .40, high ), radial ) ).toVar();
+	const spill = sub( 1., smoothstep( .55, .83, radial ) ).mul( .11 ).toVar();
+
+	return cone.add( spill ).mul( sub( 1., smoothstep( range.mul( .72 ), range, len ) ) ).mul( mix( 3.3, 5.8, high ) ).div( add( 1., len.mul( len ).div( mix( 200., 580., high ) ) ) ).mul( min( lampMode, 1. ) );
+
+}, { delta: 'vec3', return: 'float' } );
+
+const rearBeam = /*@__PURE__*/ Fn( ( [ p ] ) => {
+
+	If( reverseLight.lessThan( .001 ), () => {
+
+		return 0.;
+
+	} );
+
+	const delta = p.sub( rearLamp ).toVar();
+	const len = length( delta ).toVar();
+
+	If( len.greaterThan( 13. ), () => {
+
+		return 0.;
+
+	} );
+
+	const aim = dot( delta.div( max( len, .001 ) ), rearDirection ).toVar();
+
+	return smoothstep( .30, .83, aim ).mul( sub( 1., smoothstep( 8., 13., len ) ) ).mul( reverseLight ).mul( 2.4 ).div( add( 1., len.mul( len ).mul( .28 ) ) );
+
+}, { p: 'vec3', return: 'float' } );
+
+const boxHit = /*@__PURE__*/ Fn( ( [ o, inv, center, size ] ) => {
+
+	const a = center.sub( size ).sub( o ).mul( inv ).toVar();
+	const b = center.add( size ).sub( o ).mul( inv ).toVar();
+	const lo = min( a, b ).toVar();
+	const hi = max( a, b ).toVar();
+
+	return step( max( max( max( lo.x, lo.y ), lo.z ), .002 ), min( min( hi.x, hi.y ), hi.z ) );
+
+}, { o: 'vec3', inv: 'vec3', center: 'vec3', size: 'vec3', return: 'float' } );
+
+const wheelHit = /*@__PURE__*/ Fn( ( [ o, d, center ] ) => {
+
+	const radii = vec3( wheelShape.w, wheelShape.z, wheelShape.z ).toVar();
+	const q = o.sub( center ).div( radii ).toVar();
+	const v = d.div( radii ).toVar();
+	const a = dot( v, v ).toVar();
+	const b = dot( q, v ).toVar();
+	const c = dot( q, q ).sub( 1. ).toVar();
+	const h = b.mul( b ).sub( a.mul( c ) ).toVar();
+
+	return select( h.greaterThanEqual( 0. ).and( b.negate().add( sqrt( max( 0., h ) ) ).div( a ).greaterThan( .002 ) ), 1., 0. );
+
+}, { o: 'vec3', d: 'vec3', center: 'vec3', return: 'float' } );
+
+const vehicleOcclusion = /*@__PURE__*/ Fn( ( [ p, light ] ) => {
+
+	If( vehicleSize.x.lessThan( .01 ).or( light.y.lessThanEqual( 0. ) ), () => {
+
+		return 1.;
+
+	} );
+
+	const relative = vehicleCenter.sub( p ).toVar();
+	const along = max( 0., dot( relative, light ) ).toVar();
+
+	If( dot( relative.sub( light.mul( along ) ), relative.sub( light.mul( along ) ) ).greaterThan( 9. ), () => {
+
+		return 1.;
+
+	} );
+
+	const o = vehicleInverse.mul( vec4( p, 1. ) ).xyz.toVar();
+	const d = mat3( vehicleInverse ).mul( light ).toVar();
+	const inv = sign( d.add( vec3( .000001 ) ) ).div( max( abs( d ), vec3( .000001 ) ) ).toVar();
+	const hit = boxHit( o, inv, vec3( 0., .20, 0. ), vec3( vehicleSize.x, .19, vehicleSize.z ) ).toVar();
+	hit.assign( max( hit, boxHit( o, inv, vec3( 0., .73, .20 ), vec3( vehicleSize.x.mul( .82 ), .41, .38 ) ) ) );
+
+	If( shadowDetail.lessThan( .5 ), () => {
+
+		return mix( 1., .06, hit );
+
+	} );
+
+	hit.assign( max( hit, wheelHit( o, d, vec3( wheelShape.x.negate(), wheelOffsets.x, wheelShape.y.negate() ) ) ) );
+	hit.assign( max( hit, wheelHit( o, d, vec3( wheelShape.x.negate(), wheelOffsets.y, wheelShape.y ) ) ) );
+	hit.assign( max( hit, wheelHit( o, d, vec3( wheelShape.x, wheelOffsets.z, wheelShape.y.negate() ) ) ) );
+	hit.assign( max( hit, wheelHit( o, d, vec3( wheelShape.x, wheelOffsets.w, wheelShape.y ) ) ) );
+
+	return mix( 1., .06, hit );
+
+}, { p: 'vec3', light: 'vec3', return: 'float' } );
+
+const baseNode = /*@__PURE__*/ Fn( ( [ index, component ] ) => {
+
+	const pixel = index.mul( 6. ).add( component ).toVar();
+
+	return baseTree.sample( vec2( mod( pixel, baseTreeSize.x ), floor( pixel.div( baseTreeSize.x ) ) ).add( .5 ).div( baseTreeSize ) );
+
+}, { index: 'float', component: 'float', return: 'vec4' } );
+
+const baseSlab = /*@__PURE__*/ Fn( ( [ p, inverseDir, lo, hi, limit ] ) => {
+
+	const a = lo.sub( p ).mul( inverseDir ).toVar();
+	const b = hi.sub( p ).mul( inverseDir ).toVar();
+	const n = min( a, b ).toVar();
+	const f = max( a, b ).toVar();
+	const enter = max( max( n.x, n.y ), n.z ).toVar();
+	const leave = min( min( f.x, f.y ), f.z ).toVar();
+
+	return leave.greaterThan( max( enter, .004 ) ).and( enter.lessThan( limit ) );
+
+}, { p: 'vec3', inverseDir: 'vec3', lo: 'vec3', hi: 'vec3', limit: 'float', return: 'bool' } );
+
+const baseInverse = /*@__PURE__*/ Fn( ( [ d ] ) => {
+
+	return div( 1., mix( vec3( - 1. ), vec3( 1. ), step( vec3( 0. ), d ) ).mul( max( abs( d ), vec3( .000001 ) ) ) );
+
+}, { d: 'vec3', return: 'vec3' } );
+
+const dishRoot = /*@__PURE__*/ Fn( ( [ p, d, t, radius, limit ] ) => {
+
+	const q = p.xy.add( d.xy.mul( t ) ).toVar();
+
+	return t.greaterThan( .004 ).and( t.lessThan( limit ) ).and( dot( q, q ).lessThanEqual( radius.mul( radius ) ) );
+
+}, { p: 'vec3', d: 'vec3', t: 'float', radius: 'float', limit: 'float', return: 'bool' } );
+
+const dishSurface = /*@__PURE__*/ Fn( ( [ p, d, radius, curve, depth, limit ] ) => {
+
+	const a = curve.mul( dot( d.xy, d.xy ) ).toVar();
+	const b = d.z.add( mul( 2., curve ).mul( dot( p.xy, d.xy ) ) ).toVar();
+	const c = p.z.add( curve.mul( dot( p.xy, p.xy ) ) ).sub( depth ).toVar();
+	const hit = bool( false ).toVar();
+
+	If( abs( a ).lessThan( .0000001 ), () => {
+
+		If( abs( b ).greaterThanEqual( .0000001 ), () => {
+
+			hit.assign( dishRoot( p, d, c.negate().div( b ), radius, limit ) );
+
+		} );
+
+	} ).Else( () => {
+
+		const h = b.mul( b ).sub( mul( 4., a ).mul( c ) ).toVar();
+
+		If( h.greaterThanEqual( 0. ), () => {
+
+			const root = sqrt( h ).toVar();
+			hit.assign( dishRoot( p, d, b.negate().sub( root ).div( mul( 2., a ) ), radius, limit ).or( dishRoot( p, d, b.negate().add( root ).div( mul( 2., a ) ), radius, limit ) ) );
+
+		} );
+
+	} );
+
+	return hit;
+
+}, { p: 'vec3', d: 'vec3', radius: 'float', curve: 'float', depth: 'float', limit: 'float', return: 'bool' } );
+
+const dishHit = /*@__PURE__*/ Fn( ( [ p, d, shape, limit ] ) => {
+
+	return dishSurface( p, d, shape.x, shape.y, 0., limit ).or( dishSurface( p, d, shape.x, shape.y, shape.z, limit ) );
+
+}, { p: 'vec3', d: 'vec3', shape: 'vec3', limit: 'float', return: 'bool' } );
+
+const baseVisibility = /*@__PURE__*/ Fn( ( [ p, dir, limit ] ) => {
+
+	If( baseNodeCount.equal( 0 ).or( limit.lessThanEqual( .008 ) ), () => {
+
+		return 1.;
+
+	} );
+
+	const inv = baseInverse( dir ).toVar();
+	const index = float( 0. ).toVar();
+
+	Loop( { start: 0, end: 1024, name: 'visit' }, () => {
+
+		If( index.greaterThanEqual( float( baseNodeCount ) ), () => {
+
+			return 1.;
+
+		} );
+
+		const lo = baseNode( index, 0. ).toVar();
+		const hi = baseNode( index, 1. ).toVar();
+
+		If( baseSlab( p, inv, lo.xyz, hi.xyz, limit ).not(), () => {
+
+			index.assign( lo.w );
+			Continue();
+
+		} );
+
+		If( hi.w.lessThan( .5 ), () => {
+
+			index.addAssign( 1. );
+			Continue();
+
+		} );
+
+		If( hi.w.lessThan( 1.5 ), () => {
+
+			return 0.;
+
+		} );
+
+		const center = baseNode( index, 2. ).toVar();
+		const x = baseNode( index, 3. ).toVar();
+		const y = baseNode( index, 4. ).toVar();
+		const z = baseNode( index, 5. ).xyz.toVar();
+		const delta = p.sub( center.xyz ).toVar();
+		const localP = vec3( dot( delta, x.xyz ), dot( delta, y.xyz ), dot( delta, z ) ).toVar();
+		const localD = vec3( dot( dir, x.xyz ), dot( dir, y.xyz ), dot( dir, z ) ).toVar();
+		const halfSize = vec3( center.w, x.w, y.w ).toVar();
+		const blocked = bool( false ).toVar();
+
+		If( hi.w.greaterThan( 2.5 ), () => {
+
+			blocked.assign( dishHit( localP, localD, halfSize, limit ) );
+
+		} ).Else( () => {
+
+			blocked.assign( baseSlab( localP, baseInverse( localD ), halfSize.negate(), halfSize, limit ) );
+
+		} );
+
+		If( blocked, () => {
+
+			return 0.;
+
+		} );
+
+		index.assign( lo.w );
+
+	} );
+
+	return 0.;
+
+}, { p: 'vec3', dir: 'vec3', limit: 'float', return: 'float' } );
+
+const basePointVisibility = /*@__PURE__*/ Fn( ( [ p, normal, emitter ] ) => {
+
+	const delta = emitter.sub( p ).toVar();
+	const len = length( delta ).toVar();
+
+	return baseVisibility( p.add( normal.mul( .012 ) ), delta.div( max( len, .001 ) ), len.sub( .055 ) );
+
+}, { p: 'vec3', normal: 'vec3', emitter: 'vec3', return: 'float' } );
+
+const baseLighting = /*@__PURE__*/ Fn( ( [ p, n ] ) => {
+
+	const light = vec3( 0. ).toVar();
+
+	Loop( 4, ( { i } ) => {
+
+		If( i.greaterThanEqual( baseLightCount ), () => {
+
+			Break();
+
+		} );
+
+		const d = baseLights.element( i ).xyz.sub( p ).toVar();
+		const squared = dot( d, d ).toVar();
+		const range = baseLights.element( i ).w.toVar();
+
+		If( squared.greaterThanEqual( range.mul( range ) ), () => {
+
+			Continue();
+
+		} );
+
+		const len = sqrt( squared ).toVar();
+		const fall = sub( 1., len.div( range ) ).toVar();
+		const direction = d.div( max( len, .001 ) ).toVar();
+
+		If( fall.greaterThan( .001 ), () => {
+
+			light.addAssign( baseColors.element( i ).rgb.mul( baseColors.element( i ).a ).mul( fall ).mul( fall ).mul( add( .18, mul( .82, max( dot( n, direction ), 0. ) ) ) ).mul( baseVisibility( p.add( n.mul( .012 ) ), direction, len.sub( .10 ) ) ) );
 
 		} );
 
@@ -3209,7 +4109,13 @@ const terrainShadow = /*@__PURE__*/ Fn( ( [ p, light ] ) => {
 	const visible = float( 1. ).toVar();
 	const dist = float( 2. ).toVar();
 
-	Loop( 21, () => {
+	Loop( 21, ( { i } ) => {
+
+		If( terrainShadowDetail.lessThan( .5 ).and( i.greaterThanEqual( 12 ) ), () => {
+
+			Break();
+
+		} );
 
 		const q = p.add( light.mul( dist ) ).toVar();
 
@@ -3228,7 +4134,7 @@ const terrainShadow = /*@__PURE__*/ Fn( ( [ p, light ] ) => {
 
 		} );
 
-		dist.assign( dist.mul( 1.37 ).add( 1.8 ) );
+		dist.assign( dist.mul( mix( 1.82, 1.37, terrainShadowDetail ) ).add( 1.8 ) );
 
 	} );
 
@@ -3255,10 +4161,17 @@ const cachedTerrainShadow = /*@__PURE__*/ Fn( ( [ p, light, channel ] ) => {
 const torchShadow = /*@__PURE__*/ Fn( ( [ p, l, len ] ) => {
 
 	const v = float( 1. ).toVar();
+	const steps = mix( 7., 13., terrainShadowDetail ).toVar();
 
 	Loop( { start: 1, end: 13 }, ( { i } ) => {
 
-		const f = float( i ).div( 13. ).toVar();
+		If( float( i ).greaterThanEqual( steps ), () => {
+
+			Break();
+
+		} );
+
+		const f = float( i ).div( steps ).toVar();
 		const q = p.add( l.mul( len ).mul( f ) ).toVar();
 		v.assign( min( v, smoothstep( - .08, .12, q.y.sub( triangleHeight( q.xz ) ) ) ) );
 
@@ -3290,7 +4203,7 @@ const skyFragment = /*@__PURE__*/ Fn( ( [ vWorld, vNormal, skyPixel, skyPointUV 
 	const r2 = cross( n, dx ).toVar();
 	const det = dot( dx, r1 ).toVar();
 	const bump = sign( det ).mul( dhx.mul( r1 ).add( dhy.mul( r2 ) ) ).div( max( abs( det ), .00001 ) ).toVar();
-	n.assign( normalize( n.sub( bump.mul( .037 ).mul( sub( 1., smoothstep( 25., 110., distanceToEye ) ) ) ) ) );
+	n.assign( normalize( n.sub( bump.mul( .037 ).mul( sub( 1., smoothstep( mul( 25., quality ), mul( 110., quality ), distanceToEye ) ) ) ) ) );
 	const safePoint = p.add( normalize( vNormal ).mul( .24 ) ).toVar();
 	const solar = max( 0., dot( n, sun ) ).toVar();
 	const earthLit = max( 0., dot( n, earth ) ).toVar();
@@ -3395,9 +4308,10 @@ const skyFragment = /*@__PURE__*/ Fn( ( [ vWorld, vNormal, skyPixel, skyPointUV 
 }, { vWorld: 'vec3', vNormal: 'vec3', skyPixel: 'vec3', skyPointUV: 'vec2', return: 'vec4' } );
 
 return skyFragment(vWorld,vNormal,skyPixel,skyPointUV);})();
+})();
 return {vertex,fragment};
 }
-// 15: moon-world-Mesh
+// 15: moon Mesh
 export function material_9cc412d2(bind){
 const position=attribute('position','vec3'),normal=attribute('normal','vec3'),uv=attribute('uv','vec2');
 const projectionMatrix=cameraProjectionMatrix,viewMatrix=cameraViewMatrix,modelMatrix=modelWorldMatrix,modelViewMatrix=modelViewMatrixNode;
@@ -3406,7 +4320,9 @@ const s=varying(float(),"sky_s");
 const d=varying(float(),"sky_d");
 const beamSide=attribute("beamSide","float");
 const beamDistance=attribute("beamDistance","float");
-const vertex=(()=>{// Three.js Transpiler r186
+const vertex=Fn(()=>{
+
+return (()=>{// Three.js Transpiler r186
 
 
 
@@ -3423,7 +4339,10 @@ const skyVertex = /*@__PURE__*/ Fn( () => {
 } );
 
 return skyVertex();})();
-const fragment=(()=>{// Three.js Transpiler r186
+})();
+const fragment=Fn(()=>{
+
+return (()=>{// Three.js Transpiler r186
 
 
 
@@ -3439,10 +4358,11 @@ const skyFragment = /*@__PURE__*/ Fn( ( [ s, d, skyPixel, skyPointUV ] ) => {
 }, { s: 'float', d: 'float', skyPixel: 'vec3', skyPointUV: 'vec2', return: 'vec4' } );
 
 return skyFragment(s,d,skyPixel,skyPointUV);})();
+})();
 return {vertex,fragment};
 }
-// 16: moon-cache-Mesh
-export function material_698c673f(bind){
+// 16: moon terrain cache
+export function material_294d16e0(bind){
 const position=attribute('position','vec3'),normal=attribute('normal','vec3'),uv=attribute('uv','vec2');
 const projectionMatrix=cameraProjectionMatrix,viewMatrix=cameraViewMatrix,modelMatrix=modelWorldMatrix,modelViewMatrix=modelViewMatrixNode;
 const skyViewport=viewportSize,quadCorner=attribute('quadCorner','vec2'),skyPointUV=vec2(0),skyPixel=vec3(screenCoordinate.x,viewportSize.y.sub(screenCoordinate.y),0);
@@ -3450,8 +4370,11 @@ const origin=bind("origin","vec2",0);
 const sun=bind("sun","vec3",0);
 const earth=bind("earth","vec3",0);
 const heightMap=bind("heightMap","sampler2D",0);
+const terrainShadowDetail=bind("terrainShadowDetail","float",0);
 const uvCache=varying(vec2(),"sky_uvCache");
-const vertex=(()=>{// Three.js Transpiler r186
+const vertex=Fn(()=>{
+
+return (()=>{// Three.js Transpiler r186
 
 
 
@@ -3467,7 +4390,14 @@ const skyVertex = /*@__PURE__*/ Fn( () => {
 } );
 
 return skyVertex();})();
-const fragment=(()=>{// Three.js Transpiler r186
+})();
+const fragment=Fn(()=>{
+origin.toStack();
+sun.toStack();
+earth.toStack();
+heightMap.sample( vec2(0) ).toStack();
+terrainShadowDetail.toStack();
+return (()=>{// Three.js Transpiler r186
 
 
 
@@ -3512,7 +4442,13 @@ const terrainShadow = /*@__PURE__*/ Fn( ( [ p, light ] ) => {
 	const visible = float( 1. ).toVar();
 	const dist = float( 2. ).toVar();
 
-	Loop( 21, () => {
+	Loop( 21, ( { i } ) => {
+
+		If( terrainShadowDetail.lessThan( .5 ).and( i.greaterThanEqual( 12 ) ), () => {
+
+			Break();
+
+		} );
 
 		const q = p.add( light.mul( dist ) ).toVar();
 
@@ -3531,7 +4467,7 @@ const terrainShadow = /*@__PURE__*/ Fn( ( [ p, light ] ) => {
 
 		} );
 
-		dist.assign( dist.mul( 1.37 ).add( 1.8 ) );
+		dist.assign( dist.mul( mix( 1.82, 1.37, terrainShadowDetail ) ).add( 1.8 ) );
 
 	} );
 
@@ -3552,6 +4488,7 @@ const skyFragment = /*@__PURE__*/ Fn( ( [ uvCache, skyPixel, skyPointUV ] ) => {
 }, { uvCache: 'vec2', skyPixel: 'vec3', skyPointUV: 'vec2', return: 'vec4' } );
 
 return skyFragment(uvCache,skyPixel,skyPointUV);})();
+})();
 return {vertex,fragment};
 }
-export const materials={'52462404':material_52462404,'83a4c76f':material_83a4c76f,'c8c01696':material_c8c01696,'5f7f167':material_5f7f167,'5f83a42':material_5f83a42,'cefce723':material_cefce723,'6dc5e826':material_6dc5e826,'649d0435':material_649d0435,'30243dd9':material_30243dd9,'5c2bbb30':material_5c2bbb30,'9a598f63':material_9a598f63,'a5abfdab':material_a5abfdab,'8841ef08':material_8841ef08,'f4599137':material_f4599137,'f686ff0e':material_f686ff0e,'9cc412d2':material_9cc412d2,'698c673f':material_698c673f};
+export const materials={'52462404':material_52462404,'cf34c1a':material_cf34c1a,'c8c01696':material_c8c01696,'5f7f167':material_5f7f167,'c9168ec9':material_c9168ec9,'b49c2ab7':material_b49c2ab7,'7afce393':material_7afce393,'30243dd9':material_30243dd9,'2b3674c7':material_2b3674c7,'56a6609f':material_56a6609f,'2071ba81':material_2071ba81,'3b1f22dc':material_3b1f22dc,'8841ef08':material_8841ef08,'f4599137':material_f4599137,'d442da71':material_d442da71,'9cc412d2':material_9cc412d2,'294d16e0':material_294d16e0};

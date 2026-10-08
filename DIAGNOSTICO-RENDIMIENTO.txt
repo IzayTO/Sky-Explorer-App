@@ -1,120 +1,118 @@
-SKY EXPLORER — AUDITORÍA Y RENDIMIENTO
-Fuente: main, árbol bae6a25951db574892fa63075a35cd7eec95e2b4.
-Las cargas descritas provienen del código. No son mediciones de FPS en iPhone.
+SKY EXPLORER APP 4.1 — DIAGNÓSTICO DE RENDIMIENTO
+Fuente: IzayTO/Sky-Explorer-App/main
+commit f70f1c5ccf5541f10140c09650aee87a99b868a8.
+Auditoría de código y pruebas locales; NO son mediciones de FPS en iPhone.
 
-ARQUITECTURA AUDITADA
-app.js: único requestAnimationFrame; dos entornos conservados en memoria,
-Luna creada de forma diferida. Movimiento, vehículos, exposición, cielo,
-expedición, caché lunar, terreno, audio, render principal y overlay del gizmo.
-UI y lecturas de hora se actualizan cada ~0,12 s. El reloj físico limita dt.
-controls.js: teclado, IDs de puntero independientes, joystick, mirada,
-gravedad, salto, sprint y vehículo; se conserva íntegro.
-sky.js / lunar-sky.js: triángulos de pantalla con proyección inversa,
-atmósfera/Vía Láctea procedural, discos, fases, exposición y campo estelar.
-star-catalog.js: 41.411 estrellas compactadas; se conservan los datos.
-celestial.js: siete planetas, efemérides aproximadas, identificadores;
-no se cambia el modelo astronómico ni su orientación de juego.
-terrain.js: suelo/colinas y césped instanciado; celdas, frustum según FOV y
-máscara de construcción. Conservados 32.000 elementos base en móvil y
-48.000 en el otro perfil; no se rebaja densidad ni rango visible.
-lunar-terrain.js: alturas CPU concordantes con triángulos del shader,
-teselas/LODs/skirts existentes y texturas height/regolith. No se regenera
-geometría cada frame ni se sustituye el relieve por un plano.
-lunar-light-cache.js: caché 512×512, área 256 m, anclaje a intervalos de
-16 m y rebake por cambio de iluminación; fuera se conserva la evaluación
-original. Mantiene la oclusión del terreno por Sol y Tierra.
-world-lighting.js: BVH persistente de partes opacas, textura RGBA float,
-recorrido máximo 1024 nodos; se reconstruye al cambiar la base. Selección de
-cuatro lámparas con histéresis cada ~0,12 s, igual que la fuente.
-flashlight.js: ecuaciones compartidas de linterna/faros y atenuación.
-vehicles.js / vehicle-models.js: geometrías del rover/cuatrimoto, ruedas,
-colisiones, gravedad, boost sostenido, faros y reversa conservados.
-build-world.js / build-placement.js / spatial.js / props.js: objetos,
-colisionadores orientados, soporte, rampas, cimientos, cuadrícula y
-snap, serialización y geometrías estáticas compartidas existentes.
-build-gizmo.js: anillos 3D en overlay ortográfico, ejes/deslizadores y picking.
-inventory.js / items.js: 30+10 casillas, stacks de 30; datos, no geometrías
-ocultas por unidad. Se conservan drag, long press, scroll y atajos.
-expedition.js: pegamento de construcción/interacción/guardado, telescopio,
-fantasma, edición, undo/redo; conserva todos los sistemas.
-field-effects.js: láser dinámico y visor DOM, cuyos objetivos se recalculan
-cada ~0,2 s; sin alterar su apariencia.
-science.js / field-guide.js: instrumentos, filtros, muestras, cuaderno y guía.
-sound.js / lunar-sound.js / vehicle-sound.js: audio Web Audio procedural,
-sin descargas. Se conserva arranque dentro del gesto táctil de iOS.
-index.html / styles.css: UI, capas, orientación, safes areas, inventario,
-constructor y filtros; estilos originales conservados.
-Imágenes: earth.jpg, moon.jpg, lunar-height.png y regolith.jpg preservadas
-byte por byte respecto a la instantánea de main. Licencias y documentación
-original conservadas; LEEME antiguo queda también en HISTORIAL-3.2.txt.
-three.module.js original: r160. Actual: 0.186.1 y sus módulos locales.
+YA OPTIMIZADO EN LA FUENTE, Y CONSERVADO
+• Three r186 local, materiales TSL y respaldo WebGL real.
+• Catálogo de 41.411 estrellas y 96.000 decorativas en buffers estáticos,
+  instancing WebGPU y atributos compartidos entre mundos.
+• Geometrías de props compartidas, partes de cada prop ya fusionadas.
+• 49 sectores reutilizados para pasto y culling según frustum/FOV.
+• Relieve lunar con teselas/LODs/skirt, alturas físicas y gráficas concordantes.
+• Caché direccional lunar 512² en una región de 256 m, no ray marching
+  completo por fragmento dentro de la caché; fuera, evaluación original.
+• BVH de oclusores con textura float y cuatro lámparas seleccionadas cerca.
+• Pausa de rAF al ocultarse, dt físico limitado y lecturas UI a ~0,12 s.
+• Offline verificado por hashes, aceptación de actualizaciones y versiones
+  por ventana. No hacía falta sustituirlo.
 
-CPU: CARGAS PRINCIPALES
-• Construir alturas/geometrías y decodificar texturas al abrir Luna.
-• Colisión/soporte/raycast con muchas piezas de construcción.
-• Rehacer el BVH al editar una base grande, no cada frame.
-• Uniforms, matrices por objeto, exposición y preparación de draw calls.
-• Cálculos de previsualización mientras construyes y actualización del láser.
-• El render de UI DOM ya estaba limitado; no hacía falta rehacer ese sistema.
+CARGAS CPU IDENTIFICADAS
+1. Soporte, colisiones, techo y picking recorrían todas las entidades aunque
+   solo unas pocas estuvieran junto al jugador. En vehículos se multiplicaban
+   las consultas por rueda y subpasos físicos.
+2. Vectores, arrays y matrices temporales en esas consultas y raster de máscara.
+3. La revisión global reconstruía el BVH también por cambios de lámparas,
+   aunque no hubiesen cambiado los obstáculos.
+4. Preparación de draws y matrices para múltiples piezas del mismo tipo.
+5. Generación/decodificación de la Luna durante la primera entrada.
+6. Previsualización de construcción, colisionadores orientados y snapshots
+   al editar. Son trabajo puntual necesario, no se elimina su validación.
 
-GPU: CARGAS PRINCIPALES
-• Shaders de pantalla completa: atmósfera, ruido de Vía Láctea y discos.
-• Detalle de regolito, derivadas, sombras del relieve y BVH por fragmento.
-• Superposición de cielo/estrellas y césped instanciado.
-• Resolución interna multiplicada por DPR y antialiasing.
-• La base crece en número de draws/oclusores según lo que construye el jugador.
-• Faros, linterna y cuatro lámparas siguen evaluándose con oclusión.
+CARGAS GPU IDENTIFICADAS
+1. Cada fragmento iluminado podía recorrer el BVH varias veces por Sol,
+   Tierra, linterna, faros y lámparas. Era relevante dentro de estructuras:
+   pocos objetos grandes pueden ocupar muchísimos píxeles.
+2. Cada hoja del BVH exigía seis lecturas incluso si ya era una caja alineada.
+3. Muchos draws pequeños para piezas repetidas, pese a compartir geometría.
+4. Pasto, su viento y sus fragmentos iluminados; resolución interna y MSAA.
+5. Ruido de Vía Láctea, micro-normal de regolito, cache misses del relieve y
+   sombras de luces móviles. WebGPU no hace gratis estos cálculos.
+6. Dos anillos de montañas terrestres innecesarios para esta versión.
 
-OPTIMIZACIONES APLICADAS, SIN RECORTES VISUALES
-1. WebGPU real con materiales TSL; bibliotecas locales fijadas. Inicialización
-   asíncrona y compilación validada antes de mostrar el paisaje inicial.
-2. Estrellas en instancing de quads para conservar tamaño/perfil. Atributos
-   estáticos compartidos entre Tierra/Luna; se cambia instanceCount como antes
-   cambiaba drawRange, sin copiar 137.411 registros desde CPU cada frame.
-3. Se evita la pasada final de color/HDR innecesaria del nuevo renderer.
-   Además de conservar el color original, elimina un target intermedio y
-   una pasada de pantalla que no aportaban ningún efecto a este proyecto.
-4. Materiales Node se convierten una vez y se guardan en WeakMap. Se mantienen
-   uniforms vivos y buffers/texturas estáticos; no se recompilan por frame.
-5. El BVH reemplazado al construir se enlaza a los TextureNode correctos.
-   No se crean mapas de sombra enormes por cada lámpara; se conserva el BVH.
-6. El frustum de césped recibe el sistema de coordenadas del renderer;
-   mantiene el FOV y la densidad del perfil original.
-7. rayBox usa escalares temporales en vez de clonar un Vector3 por prueba.
-8. Sky.update reutiliza eje y vectores galácticos constantes; elimina
-   Object.entries/array de pares por frame al escribir uniforms.
-9. El láser reutiliza vectores para origen/destino/eje del punto luminoso.
-10. Auto conserva los límites originales de DPR (1,65 móvil), mínimo de escala
-    0,76 y análisis de 240 frames válidos. Baja de 0,04 en 0,04 con promedio
-    superior a 22 ms; recupera de 0,04 en 0,04 por debajo de 17 ms. Ignora
-    picos aislados de más de 200 ms. CSS/controles permanecen nítidos.
-11. Se conservan pausa al ocultarse, dt limitado y reanudación de audio/input.
-    El frame no se entrelaza con la compilación de un cambio de destino.
-12. PWA elimina descargas repetidas tras la primera instalación verificada;
-    mejora disponibilidad/carga, no convierte por sí sola 30 FPS en 60 FPS.
+MEJORAS REALIZADAS
+• Índice de celdas de 8 m: consultas locales y raycast DDA, seguido siempre
+  por la prueba original de triángulos. Orden físico estable en esquinas.
+• Instancing por geometría/sector, umbral de tres piezas. Los meshes lógicos
+  permanecen para edición, picking y colisiones; los lotes tienen bounds
+  mundiales para frustum culling. No se ocultan paredes por distancia.
+• Matrices estáticas congeladas y actualización explícita en refresh.
+• Temporales reutilizados en las rutas físicas/máscara/normales lunares.
+• Revisión espacial separada de cambios de parámetros. Interruptores y
+  temperatura de lámparas no reconstruyen el BVH.
+• Textura BVH reutilizada cuando su altura no cambia; hojas alineadas usan
+  solo las dos lecturas de bounds. Cajas inclinadas mantienen la prueba OBB.
+• Rangos cuadrados descartan lámparas antes de normalizar y recorrer sombras.
+  Contribuciones solares/luz local nulas tampoco recorren el BVH.
+• Pasto configurable con instanceCount y grupo visible, no geometrías nuevas.
+  Con pasto apagado no se culla ni se actualiza su máscara/viento.
+• Perfiles realmente cambian densidad, rango, resolución, detalle de sombras,
+  ruido de cielo y cantidad de luces relevantes. Calidad conserva lo original
+  salvo las montañas eliminadas y las correcciones explícitamente solicitadas.
+• Caché lunar de 256² / trazado simple opcional; detalladas conservan 512².
+• Láser mide a 30 Hz y mantiene dibujo continuo. Listas de balizas se invalidan
+  por revisión espacial. Las interacciones consultan únicamente celdas próximas.
+• Adaptación por presión y recuperación sostenidas, con histéresis. La UI no
+  cambia de resolución. FPS/intervalos medidos son rAF, NO tiempo de GPU.
+• Materiales TSL registran dependencias en nuevas compilaciones de pipeline;
+  se verifican instancing, cambio de caché lunar y perfiles en WebGPU real
+  con adaptador de validación. El compilador no se ejecuta en el iPhone.
 
-DECISIONES DE CONSERVACIÓN
-No se eliminaron las 96.000 estrellas decorativas, césped, texturas, luces,
-sombras, terreno, funciones ni objetos. No se cambió el modelo de gravedad.
-No se redujo la resolución de imágenes ni se aplicó LOD nuevo a modelos.
-No se reconstruyó el sistema de construcción ni el de colisiones para esta
-migración: sería un cambio de comportamiento y un riesgo innecesario.
-No se añadieron compute shaders a cargas que ya estaban en buffers estáticos.
-No se fusionaron indiscriminadamente objetos editables: afectaría picking,
-rotación, borrado, materiales por lámpara y actualización de sombras.
-No se introdujo un motor físico externo ni un pipeline de build obligatorio.
-No se movió audio/entrada táctil a workers; conservar el gesto de activación
-es especialmente importante en iOS.
+MONTAÑAS AL CAMBIAR TIERRA → LUNA → TIERRA
+En main auditado se generaban una vez y no había una rama que las eliminara
+al regresar de Luna. No se pudo reproducir físicamente tu sesión instalada,
+ni atribuir esa diferencia con certeza a caché, compilación o temperatura.
+Ahora no hay generación ni referencia de montañas en ninguna entrada de Tierra.
+La prueba de cambio de destinos confirma esta invariancia; no se disimula
+el horizonte con ningún efecto nuevo.
 
-RIESGOS RESTANTES Y MEDICIÓN
-WebGPU no acelera automáticamente cada shader. Las estrellas usan cuatro
-vértices por punto en WebGPU; preservan la apariencia, pero no se promete
-que ese paso aislado cueste menos que Points de WebGL. Los shaders lunares
-continúan siendo una carga importante porque se conserva el detalle.
-La compilación inicial y la primera carga de Luna pueden causar una pausa.
-La memoria de dos mundos y una base grande sigue siendo relevante en iPhone.
-No hay resultados de temperatura, energía o FPS en el dispositivo físico.
-El promedio de diagnóstico es de requestAnimationFrame, incluye CPU/GPU/UI,
-y solo permite comparar orientativamente la misma escena y los mismos ajustes.
-No es un temporizador GPU. Usa Auto, el mismo FOV, hora y base al comparar;
-deja terminar la descarga y la compilación inicial antes de valorar fluidez.
+MEDICIONES LOCALES / NO EXTRAPOLAR A IPHONE
+En un escenario sintético de 36 pisos repetidos, se comprueba que >=30
+entidades pasan a menos de 10 lotes, manteniendo soporte y picking individual.
+Son cantidades de objetos/lotes, no un benchmark de FPS.
+Se verifican 296 rayos de sombra dibujados con GLSL y su equivalencia CPU,
+incluyendo paredes, ventanas, cajas inclinadas y reflector circular.
+Se verifica cero reconstrucciones del BVH al cambiar una lámpara.
+GLSL compila/enlaza 17 variantes; TSL genera WGSL y se validan pipelines y
+comandos de las dos escenas con instancing y perfiles Calidad/Rendimiento.
+El adaptador WebGPU de prueba valida comandos; NO genera imágenes ni mide FPS.
+
+DECISIONES DE NO CAMBIAR
+No fusionar físicamente la base ni eliminar entidades: destruiría la edición.
+No culling por distancia de paredes: causaría fugas de luz y errores visuales.
+No eliminar estrellas, cráteres, sombras completas, instrumentos o colisiones.
+No crear otro BVH para cada luz ni mapas gigantes de sombra por lámpara.
+No aplicar LOD agresivo a paredes/interactivos por su riesgo y coste de gestión.
+No workers para controles/audio ni motor externo: conservar gesto multitouch/iOS.
+No reducir imágenes ni regenerar el mapa lunar: ya tienen caché y LOD útiles.
+No añadir compute shaders para buffers estáticos que no se reconstruyen.
+No prometer que WebGPU por sí solo supere WebGL en cualquier escena.
+
+RIESGOS RESTANTES
+Primera apertura de Luna y primera variante de shader pueden producir pausas.
+Ediciones de bases enormes siguen requiriendo BVH, snapshots y guardado.
+Los fragmentos cerca de paredes siguen calculando sombras; el coste depende
+de base, luces, FOV, resolución y dispositivo. Una base infinita no es gratuita.
+Dos mundos preparados mantienen memoria para regresar sin recarga costosa.
+El modo simple de relieve usa menos muestras: puede perder detalle fino de
+sombras; Calidad conserva el trazado original. No afecta la física.
+Interfaz/standalone, FPS sostenidos, temperatura, batería y multitouch simultáneo
+requieren pruebas en el iPhone físico. No hay resultados inventados.
+
+PARA COMPARAR
+Actualiza la PWA completamente. Entra a la misma base, destino, hora y FOV;
+espera primera carga/compilación. Activa Ajustes → Rendimiento → Mostrar FPS.
+Compara durante al menos 30 s al caminar y girar dentro de la base.
+Prueba Automático, luego Rendimiento, y por separado pasto desactivado.
+Comprueba Renderer: WebGPU en el diagnóstico. Si dice WebGL fallback, guarda
+su motivo: no compares ese cambio como una mejora supuesta de WebGPU.
