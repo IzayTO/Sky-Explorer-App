@@ -1,17 +1,17 @@
 import * as THREE from './three.module.js?v=4.0.0';
-import {createRenderer,compileScene,onGraphicsFailure,recoverGraphics,graphicsInfo} from './renderer-factory.js?v=4.1.0';
-import {Sky,clamp,smooth,phaseName} from './sky.js?v=4.1.0';
-import {Terrain} from './terrain.js?v=4.1.0';
-import {PerformanceSettings} from './performance-settings.js?v=4.1.0';
-import {Walker,bindTimeLoop,cycleHour} from './controls.js?v=4.1.0';
-import {Ambience} from './sound.js?v=4.1.0';
-import {LunarSky,MOON_GRAVITY} from './lunar-sky.js?v=4.1.0';
-import {LunarTerrain} from './lunar-terrain.js?v=4.1.0';
-import {Vehicle} from './vehicles.js?v=4.1.0';
-import {VehicleSound} from './vehicle-sound.js?v=4.1.0';
-import {Inventory} from './inventory.js?v=4.1.0';
-import {Expedition} from './expedition.js?v=4.1.0';
-import {LunarAmbience} from './lunar-sound.js?v=4.1.0';
+import {createRenderer,compileScene,onGraphicsFailure,recoverGraphics,graphicsInfo} from './renderer-factory.js?v=4.1.1';
+import {Sky,clamp,smooth,phaseName} from './sky.js?v=4.1.1';
+import {Terrain} from './terrain.js?v=4.1.1';
+import {PerformanceSettings} from './performance-settings.js?v=4.1.1';
+import {Walker,bindTimeLoop,cycleHour} from './controls.js?v=4.1.1';
+import {Ambience} from './sound.js?v=4.1.1';
+import {LunarSky,MOON_GRAVITY} from './lunar-sky.js?v=4.1.1';
+import {LunarTerrain} from './lunar-terrain.js?v=4.1.1';
+import {Vehicle} from './vehicles.js?v=4.1.1';
+import {VehicleSound} from './vehicle-sound.js?v=4.1.1';
+import {Inventory} from './inventory.js?v=4.1.1';
+import {Expedition} from './expedition.js?v=4.1.1';
+import {LunarAmbience} from './lunar-sound.js?v=4.1.1';
 
 const $=id=>document.getElementById(id),mobile=matchMedia('(pointer:coarse)').matches,reduced=matchMedia('(prefers-reduced-motion:reduce)').matches;
 const icons={
@@ -76,7 +76,7 @@ async function init(){
     walker.onJump=()=>{if(!vehicle?.mounted)audio.jump();};walker.onLand=impact=>vehicle?.mounted?motor.land(impact):audio.land(impact);
     vehicle=new Vehicle(scene);motor=new VehicleSound(audio);state.vehicleLighting=vehicle.lighting;environments.earth={scene,sky,terrain,audio,vehicle,motor,preview:moon.image,saved:null};
     walker.onLook=()=>{$('look-hint').style.opacity='0';};
-    setupMoonPreview(moon.image);bindUI();expedition=new Expedition({state,camera,walker,renderer,inventory,getEnv:()=>environments[state.destination],toast,setScope,setZoom,setInventory});expedition.activate();syncPreferences();registerSkyTools();resize();walker.update(0);sky.update(camera,state,0,pixelRatio());terrain.update(camera,sky,0);expedition.update(0,0,pixelRatio());await compileScene(renderer,scene,camera);renderer.render(scene,camera);expedition?.renderOverlay();
+    setupMoonPreview(moon.image);bindUI();expedition=new Expedition({state,camera,walker,renderer,inventory,getEnv:()=>environments[state.destination],toast,setScope,setZoom,setInventory});expedition.activate();syncPreferences();registerSkyTools();resize();walker.update(0);sky.update(camera,state,0,pixelRatio());terrain.update(camera,sky,0);expedition.update(0,0,pixelRatio());environments[state.destination].world.lights.prepare(renderer,environments[state.destination].world,camera);await compileScene(renderer,scene,camera);renderer.render(scene,camera);expedition?.renderOverlay();
     graphicsInfo.ready=true;$('enter').disabled=false;$('enter-label').textContent='Explorar';$('moon-destination').disabled=false;$('moon-enter-label').textContent='Explorar';
     renderer.domElement.addEventListener('webglcontextlost',e=>{e.preventDefault();contextLost=true;cancelAnimationFrame(raf);walker.resetInput();audio.pause();toast('Recuperando el paisaje…');});
     renderer.domElement.addEventListener('webglcontextrestored',()=>{contextLost=false;for(const env of Object.values(environments))env.terrain.lightCache?.invalidate();frameTime=0;if(state.active)audio.start();raf=requestAnimationFrame(frame);});
@@ -111,7 +111,7 @@ async function enterDestination(destination){
     state.active=true;state.playing=false;targetHour=null;state.zoomReveal=0;walker.enabled=true;walker.resetInput();setFlashlight(false);setZoom(0);camera.fov=state.fov;camera.updateProjectionMatrix();
     expedition.activate();applyDestinationUI();syncVehicleUI();hideUI(false);$('hud').hidden=false;$('welcome').classList.add('leaving');setTimeout(()=>$('welcome').hidden=true,780);$('world').focus({preventScroll:true});
     await audible;audio.setVolume(state.volume);icon($('sound-button'),audio.muted?'mute':'volume');$('sound-button').setAttribute('aria-pressed',!audio.muted);$('sound-button').setAttribute('aria-label',audio.muted?'Activar ambiente':'Silenciar ambiente');
-    walker.update(0);sky.update(camera,state,elapsed,pixelRatio());expedition.update(elapsed,0,pixelRatio());terrain.prepareLighting?.(renderer,camera,sky);terrain.update(camera,sky,elapsed,state);await compileScene(renderer,scene,camera);renderer.render(scene,camera);expedition?.renderOverlay();expedition.guide.firstVisit();
+    walker.update(0);sky.update(camera,state,elapsed,pixelRatio());expedition.update(elapsed,0,pixelRatio());environments[state.destination].world.lights.prepare(renderer,environments[state.destination].world,camera);terrain.prepareLighting?.(renderer,camera,sky);terrain.update(camera,sky,elapsed,state);await compileScene(renderer,scene,camera);renderer.render(scene,camera);expedition?.renderOverlay();expedition.guide.firstVisit();
     requestAnimationFrame(()=>$('fade').classList.remove('on'));setTimeout(()=>{$('look-hint').style.opacity='0';},8500);
   }catch(error){if(failGraphics(error))return;console.error(error);nextAudio.pause();$('loading-error').hidden=false;$('loading-error').textContent='No se pudo abrir este paisaje. Revisa que todos los archivos del ZIP estén juntos.';$('fade').classList.remove('on');}
   finally{switching=false;$('enter').disabled=false;$('moon-destination').disabled=false;$('moon-enter-label').textContent='Explorar';}
@@ -302,8 +302,9 @@ function renderFrame(now){
   walker.sensitivity=state.scope?Math.max(.008,Math.tan(camera.fov*Math.PI/360)/Math.tan(state.fov*Math.PI/360)):1;expedition.beforeMotion();walker.update(dt);expedition.afterMotion();
   if(!vehicle.mounted){vehicle.integrate(dt,0,0,state.active&&!state.panel&&!state.inventory);if(!walker.driver)vehicle.collideWalker(walker);if(!walker.driver){camera.position.x=walker.pos.x;camera.position.z=walker.pos.z;}}
   vehicle.updateLighting(dt);state.headlightExposure=Math.max(vehicle.exposure(camera),environments[state.destination].world.lights.exposure(camera));
-  renderer.info?.reset?.();sky.update(camera,state,elapsed,pixelRatio());expedition.update(elapsed,dt,pixelRatio());terrain.prepareLighting?.(renderer,camera,sky);terrain.update(camera,sky,elapsed,state);vehicle.updateAppearance(sky,camera,state,dt);audio.update(elapsed,sky.night,state.hour);motor.update(vehicle);updateVehiclePrompt();renderer.render(scene,camera);expedition?.renderOverlay();
+  renderer.info?.reset?.();sky.update(camera,state,elapsed,pixelRatio());expedition.update(elapsed,dt,pixelRatio());environments[state.destination].world.lights.prepare(renderer,environments[state.destination].world,camera);terrain.prepareLighting?.(renderer,camera,sky);terrain.update(camera,sky,elapsed,state);vehicle.updateAppearance(sky,camera,state,dt);audio.update(elapsed,sky.night,state.hour);motor.update(vehicle);updateVehiclePrompt();renderer.render(scene,camera);expedition?.renderOverlay();
   uiTime+=dt;if(uiTime>.12){uiTime=0;updateReadouts();updateVehicleUI();}
+  graphicsInfo.cachedShadows=environments[state.destination].world.lights.u.baseShadowReady.value>.5;
   graphics.sample(raw,state.active);graphics.updateHUD(now,renderer,graphicsInfo);
 
 }

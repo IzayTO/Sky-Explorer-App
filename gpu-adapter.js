@@ -1,6 +1,6 @@
 import { MeshBasicNodeMaterial, LineBasicNodeMaterial } from './three.webgpu.js?v=4.0.0';
 import { reference, texture, sRGBTransferOETF } from './three.tsl.js?v=4.0.0';
-import { materials } from './gpu-materials.js?v=4.1.0';
+import { materials } from './gpu-materials.js?v=4.1.1';
 const converted = new WeakMap();
 const properties=['side','transparent','opacity','blending','blendSrc','blendDst','blendEquation','blendSrcAlpha','blendDstAlpha','blendEquationAlpha','depthTest','depthWrite','depthFunc','colorWrite','polygonOffset','polygonOffsetFactor','polygonOffsetUnits','visible','alphaToCoverage','premultipliedAlpha','forceSinglePass'];
 export function shaderKey(material){const source=material.vertexShader+'\n'+material.fragmentShader;let h=2166136261;for(let i=0;i<source.length;i++)h=Math.imul(h^source.charCodeAt(i),16777619);return(h>>>0).toString(16);}

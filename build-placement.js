@@ -8,7 +8,14 @@ export function footprint(item,params={}){return [params.width||item.size[0],par
 function local(point,entity){return point.clone().sub(entity.position).applyAxisAngle(V(0,1,0),-entity.rotation.y);}
 function worldPoint(point,entity){return point.clone().applyAxisAngle(V(0,1,0),entity.rotation.y).add(entity.position);}
 function top(e){return e.position.y+(e.item.kind==='foundation'?0:e.item.size[1]);}
-function nearestFloor(world,point){const options=world.entities.filter(e=>['floor','foundation'].includes(e.item.kind)&&upright(e.rotation));const score=e=>{const p=local(point,e),[w,d]=footprint(e.item,e.params),outside=Math.hypot(Math.max(0,Math.abs(p.x)-w/2),Math.max(0,Math.abs(p.z)-d/2));return outside*10+(e.item.kind==='foundation'?2:0)+Math.abs(point.y-top(e))*.01;};return options.sort((a,b)=>score(a)-score(b))[0];}
+function nearestFloor(world,point){
+ let best=null,bestScore=Infinity;
+ for(const e of world.entities){if(!['floor','foundation'].includes(e.item.kind)||!upright(e.rotation))continue;
+  const p=local(point,e),[w,d]=footprint(e.item,e.params),outside=Math.hypot(Math.max(0,Math.abs(p.x)-w/2),Math.max(0,Math.abs(p.z)-d/2));
+  const score=outside*10+(e.item.kind==='foundation'?2:0)+Math.abs(point.y-top(e))*.01;
+  if(score<bestScore){best=e;bestScore=score;}
+ }return best;
+}
 function supportRay(world,camera,direction){if(direction.y>=-.001)return null;let best=null;for(const e of world.entities){if(!tiles.has(e.item.kind)||e.item.kind==='roof'||!upright(e.rotation))continue;const t=(top(e)-camera.position.y)/direction.y;if(t<.1||t>18)continue;const p=camera.position.clone().addScaledVector(direction,t),q=local(p,e),[w,d]=footprint(e.item,e.params);if(Math.abs(q.x)>w/2+.14||Math.abs(q.z)>d/2+.14)continue;if(!best||t<best.distance)best={point:p,normal:V(0,1,0),entity:e,distance:t};}return best;}
 
 function cell(point,w,d,frame,rot){
@@ -33,15 +40,15 @@ function roofRay(world,camera,direction){
   if(!best||t<best.distance)best={point:p,normal:V(0,-1,0),entity:wall,distance:t,roofPlane:true,frame:floor};
  }return best;
 }
-function adaptiveRamp(world,hit){
+function adaptiveRamp(world,hit,item){
  const e=hit.entity;if(!e||!tiles.has(e.item.kind))return {valid:false,reason:'Apunta al borde de un cimiento o un piso.'};
- const pick=edge(hit.point,e),p=pick.p,normal=V();if(pick.axis==='x'){p.x=pick.sign*pick.w/2;p.z=Math.max(-pick.d/2+1,Math.min(pick.d/2-1,Math.round(p.z)));normal.x=pick.sign;}else{p.z=pick.sign*pick.d/2;p.x=Math.max(-pick.w/2+1,Math.min(pick.w/2-1,Math.round(p.x)));normal.z=pick.sign;}p.y=0;
+ const pick=edge(hit.point,e),p=pick.p,normal=V(),edgeWidth=pick.axis==='x'?pick.d:pick.w,width=item.id.includes('wide')?edgeWidth:item.size[0],half=width/2;if(pick.axis==='x'){p.x=pick.sign*pick.w/2;p.z=Math.max(-pick.d/2+half,Math.min(pick.d/2-half,Math.round((p.z+pick.d/2-half)/width)*width-pick.d/2+half));normal.x=pick.sign;}else{p.z=pick.sign*pick.d/2;p.x=Math.max(-pick.w/2+half,Math.min(pick.w/2-half,Math.round((p.x+pick.w/2-half)/width)*width-pick.w/2+half));normal.z=pick.sign;}p.y=0;
  const upper=worldPoint(p,e);upper.y=top(e);normal.applyAxisAngle(V(0,1,0),e.rotation.y);let chosen=null;
- for(let run=2;run<=48;run+=.5){const end=upper.clone().addScaledVector(normal,run),bottom=world.ground(end.x,end.z)+.025,rise=upper.y-bottom;if(rise<.06||rise/run>.40)continue;let clear=true;const profile=[];
-  for(let i=0;i<=24;i++){const distance=run*i/24,s=upper.clone().addScaledVector(normal,distance);const ground=world.ground(s.x,s.z);if(ground>upper.y-rise*i/24+.025){clear=false;break;}profile.push(ground-bottom-.06);}if(clear){chosen={run,rise,bottom,end,profile};break;}
+ for(let run=2;run<=48;run+=.5){const end=upper.clone().addScaledVector(normal,run),side=V(normal.z,0,-normal.x);let endHigh=-Infinity;for(let column=0;column<=4;column++){const offset=(column/4-.5)*width;endHigh=Math.max(endHigh,world.ground(end.x+side.x*offset,end.z+side.z*offset));}const bottom=endHigh+.025,rise=upper.y-bottom;if(rise<.06||rise/run>.40)continue;let clear=true;const profile=[];
+  for(let i=0;i<=24;i++){const distance=run*i/24,s=upper.clone().addScaledVector(normal,distance);let high=-Infinity,low=Infinity;for(let column=0;column<=4;column++){const offset=(column/4-.5)*width,ground=world.ground(s.x+side.x*offset,s.z+side.z*offset);high=Math.max(high,ground);low=Math.min(low,ground);}if(high>upper.y-rise*i/24+.025){clear=false;break;}profile.push(low-bottom-.06);}if(clear){chosen={run,rise,bottom,end,profile};break;}
  }if(!chosen)return {valid:false,reason:'Este borde necesita una rampa de más de 48 m; elige una ladera menos profunda.'};
  const position=upper.clone().addScaledVector(normal,chosen.run/2);position.y=chosen.bottom;
- return {valid:true,position,rotation:new THREE.Euler(0,Math.atan2(normal.x,normal.z),0),params:{run:chosen.run,rise:chosen.rise,profile:chosen.profile,snapped:true},hit};
+ return {valid:true,position,rotation:new THREE.Euler(0,Math.atan2(normal.x,normal.z),0),params:{run:chosen.run,rise:chosen.rise,width,rails:item.id!=='ramp-adaptive-open'&&item.id!=='ramp-adaptive-wide',profile:chosen.profile,snapped:true},hit};
 }
 export function placement(world,item,camera,rotation,dimensions={}){
  if(dimensions.locked)return {valid:true,reason:'',position:dimensions.locked.position.clone(),rotation:rotation.clone(),params:{...dimensions.locked.params},hit:dimensions.locked.hit};
@@ -49,7 +56,7 @@ export function placement(world,item,camera,rotation,dimensions={}){
  if(item.kind==='roof'&&magnet){const plane=roofRay(world,camera,direction);if(plane&&(!hit||plane.distance<hit.distance-.03))hit=plane;}
  if(magnet&&walls.has(item.kind)){const surface=supportRay(world,camera,direction);if(surface&&(!hit||surface.distance<=hit.distance+.02))hit=surface;}
  if(!hit)return {valid:false,reason:item.kind==='roof'?'Mira el borde superior de una pared o el hueco del techo.':'Mira una superficie cercana.'};
- if(item.id==='ramp-adaptive')return adaptiveRamp(world,hit);
+ if(item.adaptive)return adaptiveRamp(world,hit,item);
  const position=hit.point.clone();let params={},valid=true,reason='';const target=hit.entity,kind=item.kind;
  if(kind==='foundation'){
   rot.x=rot.z=0;if(magnet&&!dimensions.rotationTouched&&target?.item.kind==='foundation')rot.y=target.rotation.y;position.x=Math.round(position.x*2)/2;position.z=Math.round(position.z*2)/2;
@@ -68,6 +75,7 @@ export function placement(world,item,camera,rotation,dimensions={}){
     if(!dimensions.rotationTouched)rot.y=frame?.rotation.y||target.rotation.y;position.y=top(target);
     if(!hit.roofPlane){const normal=V(0,0,1).applyAxisAngle(V(0,1,0),target.rotation.y);const cameraSide=Math.sign(camera.position.clone().sub(target.position).dot(normal))||1;const span=(Math.abs(Math.sin(rot.y-target.rotation.y))*item.size[0]+Math.abs(Math.cos(rot.y-target.rotation.y))*item.size[2])/2;const tangent=V(1,0,0).applyAxisAngle(V(0,1,0),target.rotation.y),alongSpan=(Math.abs(Math.cos(rot.y-target.rotation.y))*item.size[0]+Math.abs(Math.sin(rot.y-target.rotation.y))*item.size[2]),space=Math.max(0,(target.item.size[0]-alongSpan)/2),along=Math.max(-space,Math.min(space,hit.point.clone().sub(target.position).dot(tangent)));position.copy(target.position).addScaledVector(normal,cameraSide*span).addScaledVector(tangent,along);position.y=top(target);}
     cell(position,item.size[0],item.size[2],frame,rot);
+    if(frame){const q=local(position,frame),[fw,fd]=footprint(frame.item,frame.params),a=rot.y-frame.rotation.y,hx=(Math.abs(Math.cos(a))*item.size[0]+Math.abs(Math.sin(a))*item.size[2])/2,hz=(Math.abs(Math.sin(a))*item.size[0]+Math.abs(Math.cos(a))*item.size[2])/2;if(fw>=hx*2&&fd>=hz*2){q.x=Math.max(-fw/2+hx,Math.min(fw/2-hx,q.x));q.z=Math.max(-fd/2+hz,Math.min(fd/2-hz,q.z));const y=position.y;position.copy(worldPoint(q,frame));position.y=y;}}
    }else{valid=false;reason='Apunta a una pared alta, al hueco superior o a otra cubierta.';}
    params.snapped=valid;
   }else if(kind==='floor'){
@@ -80,6 +88,8 @@ export function placement(world,item,camera,rotation,dimensions={}){
    if(pick.axis==='x'){p.x=pick.sign*pick.w/2;p.z=Math.round((p.z+pick.d/2-along)/2)*2-pick.d/2+along;p.z=Math.max(-pick.d/2+along,Math.min(pick.d/2-along,p.z));}else{p.z=pick.sign*pick.d/2;p.x=Math.round((p.x+pick.w/2-along)/2)*2-pick.w/2+along;p.x=Math.max(-pick.w/2+along,Math.min(pick.w/2-along,p.x));}p.y=0;position.copy(worldPoint(p,target));position.y=top(target);params.snapped=true;
   }else if(walls.has(kind)&&target&&walls.has(target.item.kind)){
    if(!dimensions.rotationTouched)rot.y=target.rotation.y;const p=local(hit.point,target),sign=p.x>=0?1:-1;position.copy(worldPoint(V(sign*(target.item.size[0]+item.size[0])/2,0,0),target));position.y=target.position.y;params.snapped=true;
+  }else if(kind==='rail'&&target?.item.kind==='rail'){if(!dimensions.rotationTouched)rot.y=target.rotation.y;const q=local(hit.point,target),sign=q.x>=0?1:-1;position.copy(worldPoint(V(sign*(target.item.size[0]+item.size[0])/2,0,0),target));position.y=target.position.y;params.snapped=true;
+  }else if(kind==='rail'&&target&&tiles.has(target.item.kind)){const pick=edge(hit.point,target),q=pick.p,half=item.size[0]/2;if(!dimensions.rotationTouched)rot.set(0,target.rotation.y+(pick.axis==='x'?Math.PI/2:0),0);if(pick.axis==='x'){q.x=pick.sign*pick.w/2;q.z=Math.max(-pick.d/2+half,Math.min(pick.d/2-half,Math.round((q.z+pick.d/2-half)/item.size[0])*item.size[0]-pick.d/2+half));}else{q.z=pick.sign*pick.d/2;q.x=Math.max(-pick.w/2+half,Math.min(pick.w/2-half,Math.round((q.x+pick.w/2-half)/item.size[0])*item.size[0]-pick.w/2+half));}q.y=0;position.copy(worldPoint(q,target));position.y=top(target);params.snapped=true;
   }else{position.x=Math.round(position.x*2)/2;position.z=Math.round(position.z*2)/2;position.y=hit.normal.y>.5?world.support(position.x,position.z,hit.point.y):hit.point.y;}
  }else if(hit.normal.y>.5){position.y=world.support(position.x,position.z,hit.point.y);}
  // Lunar construction needs support beneath its actual footprint, not the

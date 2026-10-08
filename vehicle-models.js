@@ -1,6 +1,6 @@
 import * as THREE from './three.module.js?v=4.0.0';
-import {worldLightGLSL,worldUniforms} from './world-lighting.js?v=4.1.0';
-import {flashlightGLSL,vehicleLightGLSL,vehicleLightUniforms,updateVehicleLightUniforms} from './flashlight.js?v=4.1.0';
+import {worldLightGLSL,worldUniforms} from './world-lighting.js?v=4.1.1';
+import {flashlightGLSL,vehicleLightGLSL,vehicleLightUniforms,updateVehicleLightUniforms} from './flashlight.js?v=4.1.1';
 
 // Original, locally authored geometry. Static details are merged into one draw;
 // only the four wheels and the steering assembly need separate transforms.
@@ -40,10 +40,10 @@ function vehicleMaterial(){
     ${flashlightGLSL}${vehicleLightGLSL}${worldLightGLSL}
     void main(){vec3 n=normalize(vNormal),view=normalize(eye-vWorld);float ndl=0.;if(sun.y>0.)ndl=max(0.,dot(n,sun));
       vec3 ambient=mix(vec3(.009,.014,.021)+vec3(.17)*day,vec3(.00004),lunar);
-      vec3 light=ambient;if(ndl>.001&&sunVisibility>.001)light+=vec3(1.,.96,.86)*ndl*sunVisibility*mix(day*.8,1.35,lunar)*baseVisibility(vWorld+n*.03,sun,2000.);
-      float earthLit=max(0.,dot(n,earth));if(earthPower>.0001&&earthLit>.001)light+=vec3(.46,.63,1.)*earthLit*earthPower*baseVisibility(vWorld+n*.02,earth,2000.);
-      if(torch>.001){vec3 d=eye-vWorld;float beam=flashlightBeam(-d,forward)*torch;if(beam>.001)light+=vec3(.92,.96,1.)*beam*(.10+.90*max(0.,dot(n,normalize(d))))*basePointVisibility(vWorld,n,eye);}
-      if(lampMode>.001){float l=headlightBeam(vWorld-lampLeft),r=headlightBeam(vWorld-lampRight);if(l>.001)light+=vec3(.92,.96,1.)*l*basePointVisibility(vWorld,n,lampLeft)*.15;if(r>.001)light+=vec3(.92,.96,1.)*r*basePointVisibility(vWorld,n,lampRight)*.15;}
+      vec3 light=ambient;if(ndl>.001&&sunVisibility>.001)light+=vec3(1.,.96,.86)*ndl*sunVisibility*mix(day*.8,1.35,lunar)*baseDirectionalVisibility(vWorld+n*.03,sun,0.);
+      float earthLit=max(0.,dot(n,earth));if(earthPower>.0001&&earthLit>.001)light+=vec3(.46,.63,1.)*earthLit*earthPower*baseDirectionalVisibility(vWorld+n*.02,earth,1.);
+      if(torch>.001){vec3 d=eye-vWorld;float beam=flashlightBeam(-d,forward)*torch;if(beam>.001)light+=vec3(.92,.96,1.)*beam*(.10+.90*max(0.,dot(n,normalize(d))));}
+      if(lampMode>.001){float l=headlightBeam(vWorld-lampLeft),r=headlightBeam(vWorld-lampRight);if(l>.001)light+=vec3(.92,.96,1.)*l*basePointVisibility(vWorld,n,lampLeft,29)*.15;if(r>.001)light+=vec3(.92,.96,1.)*r*basePointVisibility(vWorld,n,lampRight,30)*.15;}
       float spec=pow(max(0.,dot(n,normalize(sun+view))),40.)*ndl*sunVisibility*mix(day,1.,lunar);
       light+=baseLighting(vWorld,n);vec3 color=vPaint*light+vec3(spec*.07);
       if(vEmission>0.)color+=vPaint*vEmission*min(lampMode,1.)*2.4;

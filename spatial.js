@@ -12,7 +12,7 @@ export function boxesOverlap(a,b,tolerance=.025){
  for(const n of axes){let ra=0,rb=0;for(let i=0;i<3;i++){ra+=a.half.getComponent(i)*Math.abs(a.axes[i].dot(n));rb+=b.half.getComponent(i)*Math.abs(b.axes[i].dot(n));}if(ra+rb-Math.abs(delta.dot(n))<=tolerance)return false;}
  return true;
 }
-export function entityBoxes(geometry,matrix){return (geometry.userData.colliders||geometry.userData.boxes.map(box=>({box,matrix:new THREE.Matrix4()}))).map(part=>orientedBox(part.box,new THREE.Matrix4().multiplyMatrices(matrix,part.matrix)));}
+export function entityBoxes(geometry,matrix){return (geometry.userData.colliders||geometry.userData.boxes.map(box=>({box,matrix:new THREE.Matrix4()}))).map(part=>({...orientedBox(part.box,new THREE.Matrix4().multiplyMatrices(matrix,part.matrix)),rail:!!part.rail}));}
 export function rayBox(origin,direction,box,limit=Infinity){
  let near=-Infinity,far=Infinity;const dx=origin.x-box.center.x,dy=origin.y-box.center.y,dz=origin.z-box.center.z;
  for(let i=0;i<3;i++){const axis=box.axes[i],o=dx*axis.x+dy*axis.y+dz*axis.z,d=direction.dot(axis),half=box.half.getComponent(i);if(Math.abs(d)<EPS){if(Math.abs(o)>half)return null;continue;}const a=(-half-o)/d,b=(half-o)/d;near=Math.max(near,Math.min(a,b));far=Math.min(far,Math.max(a,b));if(near>far)return null;}

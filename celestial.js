@@ -1,6 +1,6 @@
-import {createStarField} from './star-field.js?v=4.1.0';
+import {createStarField} from './star-field.js?v=4.1.1';
 import * as THREE from './three.module.js?v=4.0.0';
-import {catalog} from './star-catalog.js?v=4.1.0';
+import {catalog} from './star-catalog.js?v=4.1.1';
 const D=Math.PI/180,TAU=Math.PI*2,AU=149597870.7;
 // JPL Solar System Dynamics, Table 1 (1800–2050). Order:
 // a[au], e, I, L, longitude of perihelion, ascending node [degrees].

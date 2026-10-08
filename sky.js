@@ -1,6 +1,6 @@
-import {createStarField} from './star-field.js?v=4.1.0';
+import {createStarField} from './star-field.js?v=4.1.1';
 import * as THREE from './three.module.js?v=4.0.0';
-import {catalog} from './star-catalog.js?v=4.1.0';
+import {catalog} from './star-catalog.js?v=4.1.1';
 
 // Adapted from Paraíso's atmosphere.js and stars.js: clip-space background,
 // inverse camera projection, layered directional twilight and a single star draw.

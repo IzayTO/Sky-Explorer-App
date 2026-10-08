@@ -1,5 +1,6 @@
 import * as THREE from './three.module.js?v=4.0.0';
-import {orientedBox,rayBox} from './spatial.js?v=4.1.0';
+import {ConstructionShadows,shadowUniforms} from './shadow-atlas.js?v=4.1.1';
+import {orientedBox,rayBox} from './spatial.js?v=4.1.1';
 // One persistent, spatially indexed occluder set for the whole base. Camera
 // distance never removes a wall. A ray skips complete BVH branches on a miss.
 export const worldLightGLSL=`
@@ -35,17 +36,49 @@ float baseVisibility(vec3 p,vec3 dir,float limit){
  // through omitted casters. Normal rays visit only a few spatial branches.
  return 0.;
 }
-float basePointVisibility(vec3 p,vec3 normal,vec3 emitter){vec3 delta=emitter-p;float len=length(delta);return baseVisibility(p+normal*.012,delta/max(len,.001),len-.055);}
+
+// Four constant-time samples replace a BVH walk over every interior pixel.
+// Only actual map silhouette transitions use the exact ray, retaining crisp
+// contact/window/door edges. Outside the directional atlas the BVH remains.
+uniform sampler2D baseShadowAtlas;uniform float baseShadowReady;
+uniform mat4 baseShadowMatrices[32];uniform vec4 baseShadowRects[32],baseShadowOrigins[32];
+uniform vec3 baseShadowDirections[4];uniform float baseShadowValid[32];
+float unpackBaseDepth(vec2 uv){return dot(texture2D(baseShadowAtlas,uv).rgb,vec3(1.,1./255.,1./65025.));}
+float shadowAtSlot(vec3 p,vec3 dir,float limit,int slot){
+ if(baseShadowReady<.5||baseShadowValid[slot]<.5)return float(-1.);
+ vec4 q=baseShadowMatrices[slot]*vec4(p,1.);vec2 uv=q.xy/max(q.w,.00001)*.5+.5;
+ if(q.w<=0.||min(min(uv.x,uv.y),min(1.-uv.x,1.-uv.y))<.012)return float(-1.);
+ vec4 origin=baseShadowOrigins[slot];vec3 delta=p-origin.xyz;
+ float depth=length(delta)/origin.w;if(slot<4)depth=dot(delta,baseShadowDirections[slot])/origin.w;
+ if(depth<0.||depth>=1.)return float(-1.);
+ vec4 rect=baseShadowRects[slot];vec2 pixel=(rect.xy+uv*rect.zw)*2048.-.5,corner=(floor(pixel)+.5)/2048.;
+ float compare=depth-.002/origin.w;
+ float a=step(compare,unpackBaseDepth(corner)),b=step(compare,unpackBaseDepth(corner+vec2(1./2048.,0.)));
+ float c=step(compare,unpackBaseDepth(corner+vec2(0.,1./2048.))),d=step(compare,unpackBaseDepth(corner+vec2(1./2048.)));
+ if(min(min(a,b),min(c,d))!=max(max(a,b),max(c,d)))return baseVisibility(p,dir,limit);
+ return a;
+}
+float baseDirectionalVisibility(vec3 p,vec3 dir,float channel){
+ int slot=int(channel)*2;float visibility=shadowAtSlot(p,dir,2000.,slot);
+ if(visibility<0.)visibility=shadowAtSlot(p,dir,2000.,slot+1);
+ if(visibility<0.)visibility=baseVisibility(p,dir,2000.);return visibility;
+}
+int baseCubeFace(vec3 p){vec3 a=abs(p);int face=0;if(a.x>=a.y&&a.x>=a.z)face=p.x>=0.?0:1;else if(a.y>=a.z)face=p.y>=0.?2:3;else face=p.z>=0.?4:5;return face;}
+float baseLocalVisibility(vec3 p,vec3 dir,float limit,int slot){float visibility=shadowAtSlot(p,dir,limit,slot);if(visibility<0.)visibility=baseVisibility(p,dir,limit);return visibility;}
+float basePointVisibility(vec3 p,vec3 normal,vec3 emitter,int slot){
+ vec3 delta=emitter-p;float len=length(delta);
+ return baseLocalVisibility(p+normal*.012,delta/max(len,.001),len-.055,slot);
+}
 vec3 baseLighting(vec3 p,vec3 n){vec3 light=vec3(0.);for(int i=0;i<4;i++){
  if(i>=baseLightCount)break;vec3 d=baseLights[i].xyz-p;float squared=dot(d,d),range=baseLights[i].w;
  if(squared>=range*range)continue;float len=sqrt(squared),fall=1.-len/range;vec3 direction=d/max(len,.001);
- if(fall>.001)light+=baseColors[i].rgb*baseColors[i].a*fall*fall*(.18+.82*max(dot(n,direction),0.))*baseVisibility(p+n*.012,direction,len-.10);
+ if(fall>.001)light+=baseColors[i].rgb*baseColors[i].a*fall*fall*(.18+.82*max(dot(n,direction),0.))*baseLocalVisibility(p+n*.012,direction,len-.10,4+i*6+baseCubeFace(-d));
 }return light;}
 `;
 let emptyTree;
 export function worldUniforms(){
  if(!emptyTree){emptyTree=new THREE.DataTexture(new Float32Array(4),1,1,THREE.RGBAFormat,THREE.FloatType);emptyTree.needsUpdate=true;}
- return {baseLights:{value:Array.from({length:4},()=>new THREE.Vector4())},baseColors:{value:Array.from({length:4},()=>new THREE.Vector4())},baseLightCount:{value:0},baseNodeCount:{value:0},baseTree:{value:emptyTree},baseTreeSize:{value:new THREE.Vector2(1,1)},shadowDetail:{value:1}};
+ return {...shadowUniforms(),baseLights:{value:Array.from({length:4},()=>new THREE.Vector4())},baseColors:{value:Array.from({length:4},()=>new THREE.Vector4())},baseLightCount:{value:0},baseNodeCount:{value:0},baseTree:{value:emptyTree},baseTreeSize:{value:new THREE.Vector2(1,1)},shadowDetail:{value:1}};
 }
 export const LAMP_TEMPERATURES=[{label:'Cálida · 2700 K',color:0xffc38c},{label:'Neutra · 4000 K',color:0xffe6cc},{label:'Fría · 6500 K',color:0xd4e6ff}];
 function boundsHit(origin,dir,b,limit){let near=0,far=limit;for(let i=0;i<3;i++){
@@ -65,7 +98,8 @@ function dishBlocked(origin,direction,box,limit){
  }return false;
 }
 export class WorldLighting{
- constructor(){this.u=worldUniforms();this.last=-99;this.revision=-1;this.nodes=[];this.c=new THREE.Color();this.dir=new THREE.Vector3();this.delta=new THREE.Vector3();this.matrix=new THREE.Matrix4();this.selected=[];this.distances=[];this.detailed=true;this.lightLimit=4;this.rebuilds=0;}
+ constructor(){this.u=worldUniforms();this.last=-99;this.revision=-1;this.nodes=[];this.c=new THREE.Color();this.dir=new THREE.Vector3();this.delta=new THREE.Vector3();this.matrix=new THREE.Matrix4();this.selected=[];this.distances=[];this.detailed=true;this.lightLimit=4;this.rebuilds=0;this.shadows=new ConstructionShadows(this.u);}
+ prepare(renderer,world,camera){this.shadows.prepare(renderer,world,camera);}
  attach(uniforms){Object.assign(uniforms,this.u);}
  configureGraphics(options){if(this.detailed!==options.shadows){this.detailed=options.shadows;this.revision=-1;}this.u.shadowDetail.value=options.shadows?1:0;if(this.lightLimit!==options.lights){this.lightLimit=options.lights;this.last=-99;}}
  rebuild(world){

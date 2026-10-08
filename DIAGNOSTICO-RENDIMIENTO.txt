@@ -1,118 +1,81 @@
-SKY EXPLORER APP 4.1 — DIAGNÓSTICO DE RENDIMIENTO
-Fuente: IzayTO/Sky-Explorer-App/main
-commit f70f1c5ccf5541f10140c09650aee87a99b868a8.
-Auditoría de código y pruebas locales; NO son mediciones de FPS en iPhone.
+SKY EXPLORER APP — DIAGNÓSTICO 4.1.1
+Fuente: 1271a4190fc78d77038fff4647c3a69aab15d49d
 
-YA OPTIMIZADO EN LA FUENTE, Y CONSERVADO
-• Three r186 local, materiales TSL y respaldo WebGL real.
-• Catálogo de 41.411 estrellas y 96.000 decorativas en buffers estáticos,
-  instancing WebGPU y atributos compartidos entre mundos.
-• Geometrías de props compartidas, partes de cada prop ya fusionadas.
-• 49 sectores reutilizados para pasto y culling según frustum/FOV.
-• Relieve lunar con teselas/LODs/skirt, alturas físicas y gráficas concordantes.
-• Caché direccional lunar 512² en una región de 256 m, no ray marching
-  completo por fragmento dentro de la caché; fuera, evaluación original.
-• BVH de oclusores con textura float y cuatro lámparas seleccionadas cerca.
-• Pausa de rAF al ocultarse, dt físico limitado y lecturas UI a ~0,12 s.
-• Offline verificado por hashes, aceptación de actualizaciones y versiones
-  por ventana. No hacía falta sustituirlo.
+CAUSA IDENTIFICADA
+Las capturas del usuario muestran 10–12 FPS con solo 13–24 draws. El código
+anterior podía lanzar hasta 1024 visitas de BVH por rayo de luz y píxel.
+Paredes/pisos/techos cercanos multiplicaban ese trabajo por la pantalla entera.
+El pasto y los draw calls no explican por sí solos ese comportamiento.
+No hay una captura de perfilador del iPhone: esta atribución se basa en el
+código, el patrón de las capturas y una prueba local del shader.
 
-CARGAS CPU IDENTIFICADAS
-1. Soporte, colisiones, techo y picking recorrían todas las entidades aunque
-   solo unas pocas estuvieran junto al jugador. En vehículos se multiplicaban
-   las consultas por rueda y subpasos físicos.
-2. Vectores, arrays y matrices temporales en esas consultas y raster de máscara.
-3. La revisión global reconstruía el BVH también por cambios de lámparas,
-   aunque no hubiesen cambiado los obstáculos.
-4. Preparación de draws y matrices para múltiples piezas del mismo tipo.
-5. Generación/decodificación de la Luna durante la primera entrada.
-6. Previsualización de construcción, colisionadores orientados y snapshots
-   al editar. Son trabajo puntual necesario, no se elimina su validación.
+ARQUITECTURA IMPLEMENTADA
+• Atlas de sombras RGBA8 2048² con profundidad, sin mipmaps ni MSAA.
+  Aproximadamente 32 MiB de adjuntos color/profundidad para el destino activo,
+  sujetos al formato y asignaciones internas del driver. No es una medición
+  del consumo total de la aplicación. El destino inactivo libera su atlas.
+• Cascadas de construcción de 24 y 160 m por fuente celeste (512² por vista).
+  Cuatro lámparas como máximo según el perfil, seis caras 256² cada una.
+  Tres vistas de faros/marcha atrás de 512². El resto del atlas queda reservado.
+• Casters de geometría real; modelo circular de antena conservado. Emisión
+  no actúa como bloque opaco y cada lámpara excluye su propio emisor para
+  evitar autooclusiones negras. Las otras lámparas siguen siendo oclusoras.
+• Comparación de cuatro texeles. Las transiciones que discrepan se resuelven
+  con el BVH exacto; fuera de mapa/alcance se conserva también ese respaldo.
+  Se mantienen aberturas de ventanas/puertas y sombras lejanas.
+• Sin cambios de luz/objetos/región no se redibujan las vistas estáticas.
+  El mapa de faros se actualiza al moverse. El ciclo solar también invalida
+  sus vistas cuando cambia la dirección por encima del umbral subtexel.
+• Limpieza por triángulo dentro de cada viewport: un clear de WebGPU podía
+  limpiar todo el adjunto e invalidar las demás vistas del atlas.
+• Viewports en píxeles físicos del render target, independientes del DPR;
+  origen vertical y sampling adaptados a WebGPU y WebGL.
+• Textura vacía RGBA8, compatible con el atlas real al liberar/recrear, para
+  no cambiar la clase de muestreo de los bind groups WebGPU.
+• Linterna: no repite la oclusión desde la cámara que ya decide la profundidad.
+• Materiales de lámparas con estado independiente. Batching, índice espacial,
+  geometrías compartidas y optimizaciones lunares de 4.1.0 se mantienen.
+• Selección de superficie próxima sin crear, filtrar ni ordenar un array
+  nuevo; auxiliares de sombras reutilizados durante el frame.
 
-CARGAS GPU IDENTIFICADAS
-1. Cada fragmento iluminado podía recorrer el BVH varias veces por Sol,
-   Tierra, linterna, faros y lámparas. Era relevante dentro de estructuras:
-   pocos objetos grandes pueden ocupar muchísimos píxeles.
-2. Cada hoja del BVH exigía seis lecturas incluso si ya era una caja alineada.
-3. Muchos draws pequeños para piezas repetidas, pese a compartir geometría.
-4. Pasto, su viento y sus fragmentos iluminados; resolución interna y MSAA.
-5. Ruido de Vía Láctea, micro-normal de regolito, cache misses del relieve y
-   sombras de luces móviles. WebGPU no hace gratis estos cálculos.
-6. Dos anillos de montañas terrestres innecesarios para esta versión.
+COMPARACIÓN LOCAL
+Prueba: misma pared interior de 512 × 512 píxeles, misma escena, dos rayos de
+luz y ecuaciones reales. Mesa llvmpipe, rasterizado por SOFTWARE en el equipo
+de pruebas, siete muestras tras calentamiento. NO es Safari ni una GPU móvil.
+Se registraron medianas de 34,33 ms (BVH por fragmento) y 4,50 ms (atlas).
+Los tiempos cambiaron entre ejecuciones por carga/JIT del equipo; no equivalen
+a FPS de Sky Explorer ni permiten prometer una mejora porcentual en iPhone.
+Las dos imágenes de esa prueba fueron idénticas. Además, 2196 muestras de
+visibilidad sobre superficies expuestas coincidieron con la oclusión exacta.
 
-MEJORAS REALIZADAS
-• Índice de celdas de 8 m: consultas locales y raycast DDA, seguido siempre
-  por la prueba original de triángulos. Orden físico estable en esquinas.
-• Instancing por geometría/sector, umbral de tres piezas. Los meshes lógicos
-  permanecen para edición, picking y colisiones; los lotes tienen bounds
-  mundiales para frustum culling. No se ocultan paredes por distancia.
-• Matrices estáticas congeladas y actualización explícita en refresh.
-• Temporales reutilizados en las rutas físicas/máscara/normales lunares.
-• Revisión espacial separada de cambios de parámetros. Interruptores y
-  temperatura de lámparas no reconstruyen el BVH.
-• Textura BVH reutilizada cuando su altura no cambia; hojas alineadas usan
-  solo las dos lecturas de bounds. Cajas inclinadas mantienen la prueba OBB.
-• Rangos cuadrados descartan lámparas antes de normalizar y recorrer sombras.
-  Contribuciones solares/luz local nulas tampoco recorren el BVH.
-• Pasto configurable con instanceCount y grupo visible, no geometrías nuevas.
-  Con pasto apagado no se culla ni se actualiza su máscara/viento.
-• Perfiles realmente cambian densidad, rango, resolución, detalle de sombras,
-  ruido de cielo y cantidad de luces relevantes. Calidad conserva lo original
-  salvo las montañas eliminadas y las correcciones explícitamente solicitadas.
-• Caché lunar de 256² / trazado simple opcional; detalladas conservan 512².
-• Láser mide a 30 Hz y mantiene dibujo continuo. Listas de balizas se invalidan
-  por revisión espacial. Las interacciones consultan únicamente celdas próximas.
-• Adaptación por presión y recuperación sostenidas, con histéresis. La UI no
-  cambia de resolución. FPS/intervalos medidos son rAF, NO tiempo de GPU.
-• Materiales TSL registran dependencias en nuevas compilaciones de pipeline;
-  se verifican instancing, cambio de caché lunar y perfiles en WebGPU real
-  con adaptador de validación. El compilador no se ejecuta en el iPhone.
+COSTES QUE SIGUEN EXISTIENDO
+• Muestreo de suelo/regolito, atmósfera y campo estelar.
+• Relleno de pantalla, ancho de banda y resolución interna del dispositivo.
+• Límites, geometría y coste de dibujar grandes bases/vehículos.
+• Reconstrucción CPU del BVH y casters cuando se coloca/elimina una pieza.
+• Pasadas al modificar luces, conducir con faros o avanzar el ciclo celeste.
+• Respaldo exacto en bordes de sombras, junturas entre caras y fuera de mapa.
+• La precisión finita del atlas puede mostrar aliasing o perder algún detalle
+  más pequeño que un texel. No se garantiza identidad por píxel en todos los
+  ángulos y drivers; los bordes detectados mantienen resolución exacta.
+• La selección de luces conserva los límites de cada perfil de 4.1.0.
+• Temperatura, ahorro de energía y presión de memoria del iPhone pueden
+  limitar los FPS independientemente de estas correcciones.
 
-MONTAÑAS AL CAMBIAR TIERRA → LUNA → TIERRA
-En main auditado se generaban una vez y no había una rama que las eliminara
-al regresar de Luna. No se pudo reproducir físicamente tu sesión instalada,
-ni atribuir esa diferencia con certeza a caché, compilación o temperatura.
-Ahora no hay generación ni referencia de montañas en ninguna entrada de Tierra.
-La prueba de cambio de destinos confirma esta invariancia; no se disimula
-el horizonte con ningún efecto nuevo.
+OPTIMIZACIONES QUE NO SE HAN APLICADO
+No se han quitado sombras, piezas, estrellas, césped por defecto ni relieve.
+No se han reducido arbitrariamente geometrías/modelos para resolver el coste.
+No se han fusionado entidades rompiendo edición, picking o guardado.
+No se ha añadido oclusión por habitaciones que pueda ocultar paredes/ventanas.
+No se ha reescrito el motor ni forzado el respaldo WebGL.
+No se han añadido efectos de niebla para esconder el horizonte.
+No se ha acelerado agresivamente la bajada de resolución para enmascarar
+el problema: los perfiles y la histéresis anteriores siguen funcionando.
 
-MEDICIONES LOCALES / NO EXTRAPOLAR A IPHONE
-En un escenario sintético de 36 pisos repetidos, se comprueba que >=30
-entidades pasan a menos de 10 lotes, manteniendo soporte y picking individual.
-Son cantidades de objetos/lotes, no un benchmark de FPS.
-Se verifican 296 rayos de sombra dibujados con GLSL y su equivalencia CPU,
-incluyendo paredes, ventanas, cajas inclinadas y reflector circular.
-Se verifica cero reconstrucciones del BVH al cambiar una lámpara.
-GLSL compila/enlaza 17 variantes; TSL genera WGSL y se validan pipelines y
-comandos de las dos escenas con instancing y perfiles Calidad/Rendimiento.
-El adaptador WebGPU de prueba valida comandos; NO genera imágenes ni mide FPS.
-
-DECISIONES DE NO CAMBIAR
-No fusionar físicamente la base ni eliminar entidades: destruiría la edición.
-No culling por distancia de paredes: causaría fugas de luz y errores visuales.
-No eliminar estrellas, cráteres, sombras completas, instrumentos o colisiones.
-No crear otro BVH para cada luz ni mapas gigantes de sombra por lámpara.
-No aplicar LOD agresivo a paredes/interactivos por su riesgo y coste de gestión.
-No workers para controles/audio ni motor externo: conservar gesto multitouch/iOS.
-No reducir imágenes ni regenerar el mapa lunar: ya tienen caché y LOD útiles.
-No añadir compute shaders para buffers estáticos que no se reconstruyen.
-No prometer que WebGPU por sí solo supere WebGL en cualquier escena.
-
-RIESGOS RESTANTES
-Primera apertura de Luna y primera variante de shader pueden producir pausas.
-Ediciones de bases enormes siguen requiriendo BVH, snapshots y guardado.
-Los fragmentos cerca de paredes siguen calculando sombras; el coste depende
-de base, luces, FOV, resolución y dispositivo. Una base infinita no es gratuita.
-Dos mundos preparados mantienen memoria para regresar sin recarga costosa.
-El modo simple de relieve usa menos muestras: puede perder detalle fino de
-sombras; Calidad conserva el trazado original. No afecta la física.
-Interfaz/standalone, FPS sostenidos, temperatura, batería y multitouch simultáneo
-requieren pruebas en el iPhone físico. No hay resultados inventados.
-
-PARA COMPARAR
-Actualiza la PWA completamente. Entra a la misma base, destino, hora y FOV;
-espera primera carga/compilación. Activa Ajustes → Rendimiento → Mostrar FPS.
-Compara durante al menos 30 s al caminar y girar dentro de la base.
-Prueba Automático, luego Rendimiento, y por separado pasto desactivado.
-Comprueba Renderer: WebGPU en el diagnóstico. Si dice WebGL fallback, guarda
-su motivo: no compares ese cambio como una mejora supuesta de WebGPU.
+PRUEBA PENDIENTE EN IPHONE
+Abrir la misma base, con la misma hora y perfil, y comparar exterior/interior,
+linterna apagada/encendida y lámpara apagada/encendida. Esperar a que termine
+la descarga offline; dejar estabilizar FPS unos segundos después de entrar.
+Confirmar versión 4.1.1-shadow-cache y Renderer: WebGPU. Si dice WebGL fallback,
+conservar el motivo diagnóstico: no interpretar el cambio de backend como
+una mejora medida de WebGPU. No se han obtenido FPS físicos de iPhone.

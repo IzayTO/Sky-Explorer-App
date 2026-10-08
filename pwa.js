@@ -40,6 +40,7 @@ function renderDiagnostics(){if(!details)return;const g=window.SkyDiagnostics||{
  'Gráficos listos: '+(g.ready?'sí':'todavía no'),
  'Ventana: '+(standalone?'PWA / pantalla de inicio':'pestaña de Safari'),
  'Destino: '+(g.world==='moon'?'Luna':'Tierra'),
+ 'Sombras de construcciones: '+(g.cachedShadows?'mapas reutilizados':'sin estructuras activas'),
  'Offline: '+(p.ready?'Tierra y Luna guardadas':'descarga pendiente'),
  'Caché: '+(p.version||'preparando'),
  'Archivos: '+(p.files||'—'),
