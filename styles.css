@@ -229,3 +229,6 @@ body:has(#build-controls:not([hidden]) #rotation-sliders:not([hidden])) #exp-rea
 @media(orientation:portrait){.touch-controls #utility-dock{right:max(20px,env(safe-area-inset-right));bottom:calc(213px + var(--safe-bottom))}}
 
 .touch-controls:has(#build-controls:not([hidden]) #rotation-sliders:not([hidden])) #utility-dock{visibility:hidden;pointer-events:none}
+
+#destination-loading{position:fixed;inset:0;display:grid;place-items:center;z-index:1000;color:var(--text,#e9e9df);font-size:14px;letter-spacing:.05em;pointer-events:none;}
+#destination-loading[hidden]{display:none;}

@@ -1,6 +1,6 @@
-import {createStarField} from './star-field.js?v=4.1.1';
+import {createStarField} from './star-field.js?v=4.1.2';
 import * as THREE from './three.module.js?v=4.0.0';
-import {catalog} from './star-catalog.js?v=4.1.1';
+import {catalog} from './star-catalog.js?v=4.1.2';
 
 // Adapted from Paraíso's atmosphere.js and stars.js: clip-space background,
 // inverse camera projection, layered directional twilight and a single star draw.
@@ -55,8 +55,8 @@ return sky;
 function backdrop(scene,uniforms,fragment,order,transparent=false){
   const geometry=new THREE.BufferGeometry();
   geometry.setAttribute('position',new THREE.Float32BufferAttribute([-1,-1,0,3,-1,0,-1,3,0],3));
-  const mesh=new THREE.Mesh(geometry,new THREE.ShaderMaterial({vertexShader:vertex,fragmentShader:fragment,uniforms,depthWrite:false,depthTest:false,toneMapped:false,transparent:false,blending:transparent?THREE.AdditiveBlending:THREE.NormalBlending,extensions:{derivatives:true}}));
-  mesh.frustumCulled=false;mesh.renderOrder=order;scene.add(mesh);return mesh;
+  const mesh=new THREE.Mesh(geometry,new THREE.ShaderMaterial({vertexShader:vertex,fragmentShader:fragment,uniforms,depthWrite:false,depthTest:true,toneMapped:false,transparent:false,blending:transparent?THREE.AdditiveBlending:THREE.NormalBlending,extensions:{derivatives:true}}));
+  mesh.layers.set(1);mesh.frustumCulled=false;mesh.renderOrder=order+20000;scene.add(mesh);return mesh;
 }
 function equatorial(ra,dec){ra*=Math.PI/180;dec*=Math.PI/180;return new THREE.Vector3(Math.cos(dec)*Math.cos(ra),Math.sin(dec),Math.cos(dec)*Math.sin(ra));}
 export function phaseName(p){if(p<.012||p>.988)return 'Luna nueva';if(Math.abs(p-.25)<.012)return 'Cuarto creciente';if(Math.abs(p-.5)<.012)return 'Luna llena';if(Math.abs(p-.75)<.012)return 'Cuarto menguante';return p<.25?'Luna creciente':p<.5?'Gibosa creciente':p<.75?'Gibosa menguante':'Luna menguante';}
@@ -150,9 +150,9 @@ export class Sky {
     }
     const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.Float32BufferAttribute(p,3));geo.setAttribute('magnitude',new THREE.Float32BufferAttribute(mag,1));geo.setAttribute('starColor',new THREE.Float32BufferAttribute(color,3));geo.setAttribute('seed',new THREE.Float32BufferAttribute(seed,1));
     this.catalogCount=catalog.length/4;this.starCount=mag.length;
-    const mat=new THREE.ShaderMaterial({uniforms:this.u,depthWrite:false,depthTest:false,transparent:false,blending:THREE.AdditiveBlending,toneMapped:false,
+    const mat=new THREE.ShaderMaterial({uniforms:this.u,depthWrite:false,depthTest:true,transparent:false,blending:THREE.AdditiveBlending,toneMapped:false,
       vertexShader:`attribute float magnitude,seed;attribute vec3 starColor;uniform mat4 field;uniform vec3 sunDirection;uniform float night,moonlight,starLimit,pixelRatio,time,zoomReveal;varying vec3 vColor;varying float vAlpha;
-        void main(){vec3 dir=mat3(field)*position;vec3 vd=mat3(viewMatrix)*dir;vec4 projected=projectionMatrix*vec4(vd,1.);gl_Position=projected.w>0.?vec4(projected.xy,projected.w*.99999,projected.w):vec4(2.,2.,2.,1.);
+        void main(){vec3 dir=mat3(field)*position;vec3 vd=mat3(viewMatrix)*dir;vec4 projected=projectionMatrix*vec4(vd,1.);gl_Position=projected.w>0.?vec4(projected.xy,projected.w,projected.w):vec4(2.,2.,2.,1.);
           float visible=1.-smoothstep(starLimit-.5,starLimit+.22,magnitude);
           float strength=pow(10.,-.17*(magnitude-1.));
           float twilightVis=1.-smoothstep(-.24,.04,sunDirection.y);float brightness=clamp(strength,.065,1.2);
@@ -166,7 +166,7 @@ export class Sky {
           vColor=starColor;
         }`,
       fragmentShader:`varying vec3 vColor;varying float vAlpha;void main(){vec2 q=gl_PointCoord*2.-1.;float r=dot(q,q);float core=exp(-4.5*r)*(1.-smoothstep(.52,1.,r));gl_FragColor=vec4(vColor*vAlpha*core*1.3,1.);}`});
-    this.stars=createStarField(geo,mat);this.stars.frustumCulled=false;this.stars.renderOrder=-9998;scene.add(this.stars);
+    this.stars=createStarField(geo,mat);this.stars.layers.set(1);this.stars.frustumCulled=false;this.stars.renderOrder=10002;scene.add(this.stars);
   }
   update(camera,state,t,pixelRatio){
     this.u.skyDetail.value=state.graphics?.advancedSky===false?0:1;

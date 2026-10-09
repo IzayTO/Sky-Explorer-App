@@ -1,17 +1,19 @@
 import * as THREE from './three.module.js?v=4.0.0';
-import {createRenderer,compileScene,onGraphicsFailure,recoverGraphics,graphicsInfo} from './renderer-factory.js?v=4.1.1';
-import {Sky,clamp,smooth,phaseName} from './sky.js?v=4.1.1';
-import {Terrain} from './terrain.js?v=4.1.1';
-import {PerformanceSettings} from './performance-settings.js?v=4.1.1';
-import {Walker,bindTimeLoop,cycleHour} from './controls.js?v=4.1.1';
-import {Ambience} from './sound.js?v=4.1.1';
-import {LunarSky,MOON_GRAVITY} from './lunar-sky.js?v=4.1.1';
-import {LunarTerrain} from './lunar-terrain.js?v=4.1.1';
-import {Vehicle} from './vehicles.js?v=4.1.1';
-import {VehicleSound} from './vehicle-sound.js?v=4.1.1';
-import {Inventory} from './inventory.js?v=4.1.1';
-import {Expedition} from './expedition.js?v=4.1.1';
-import {LunarAmbience} from './lunar-sound.js?v=4.1.1';
+import {createRenderer,compileScene,onGraphicsFailure,recoverGraphics,graphicsInfo} from './renderer-factory.js?v=4.1.2';
+import {Sky,clamp,smooth,phaseName} from './sky.js?v=4.1.2';
+import {Terrain} from './terrain.js?v=4.1.2';
+import {LandscapeRenderer} from './landscape-renderer.js?v=4.1.2';
+import {environmentSnapshot,releaseEnvironment} from './environment-resources.js?v=4.1.2';
+import {PerformanceSettings} from './performance-settings.js?v=4.1.2';
+import {Walker,bindTimeLoop,cycleHour} from './controls.js?v=4.1.2';
+import {Ambience} from './sound.js?v=4.1.2';
+import {LunarSky,MOON_GRAVITY} from './lunar-sky.js?v=4.1.2';
+import {LunarTerrain} from './lunar-terrain.js?v=4.1.2';
+import {Vehicle} from './vehicles.js?v=4.1.2';
+import {VehicleSound} from './vehicle-sound.js?v=4.1.2';
+import {Inventory} from './inventory.js?v=4.1.2';
+import {Expedition} from './expedition.js?v=4.1.2';
+import {LunarAmbience} from './lunar-sound.js?v=4.1.2';
 
 const $=id=>document.getElementById(id),mobile=matchMedia('(pointer:coarse)').matches,reduced=matchMedia('(prefers-reduced-motion:reduce)').matches;
 const icons={
@@ -45,9 +47,9 @@ const state={inventory:false,destination:'earth',moonAppearance:'natural',headli
 try{const saved=JSON.parse(localStorage.getItem('a-cielo-abierto-prefs-v1')||'null');if(saved){for(const key of ['fov','speed','volume','milky','sway','quality','duration','moonAppearance'])if(saved[key]!==undefined)state[key]=saved[key];state.fov=clamp(Number(state.fov)||100,55,120);state.speed=clamp(Number(state.speed)||1,.4,4);state.volume=clamp(Number(state.volume)||0);state.duration=clamp(Number(state.duration)||12,2,60);if(!['auto','high','balanced'].includes(state.quality))state.quality='auto';}}catch{}
 const graphics=new PerformanceSettings({legacyQuality:state.quality,mobile,deviceRatio:devicePixelRatio||1,onChange:applyGraphics});state.graphics=graphics.effective;
 function save(){try{const {fov,speed,volume,milky,sway,quality,duration,moonAppearance}=state;localStorage.setItem('a-cielo-abierto-prefs-v1',JSON.stringify({fov,speed,volume,milky,sway,quality,duration,moonAppearance}));}catch{}}
-let renderer,scene,camera,sky,terrain,walker,audio,vehicle,motor,inventory,expedition,raf,frameTime=0,elapsed=0,uiTime=0,contextLost=false,phaseImageData;
+let landscape,renderer,scene,camera,sky,terrain,walker,audio,vehicle,motor,inventory,expedition,raf,frameTime=0,nextFrame=0,frameInterval=0,elapsed=0,uiTime=0,contextLost=false,phaseImageData;
 const promptPoint=new THREE.Vector3();
-let targetHour=null,phaseControlUntil=0,previewBuffer=null,lastPreviewKey='';const environments={};let switching=false;const lunarAudio=new LunarAmbience();
+let targetHour=null,phaseControlUntil=0,previewBuffer=null,lastPreviewKey='';const environments={},destinationSaves={};let switching=false;
 const surfaceAnimations=new WeakMap();
 function showSurface(el,show){
   const wasHidden=el.hidden,style=wasHidden?null:getComputedStyle(el);
@@ -62,59 +64,78 @@ function showSurface(el,show){
 function viewport(){return {w:window.innerWidth,h:window.innerHeight};}
 function targetFov(){if(!state.scope||state.zoom===0)return state.fov;const {w,h}=viewport();const levels=state.mountedScope?[0,6,1,.10]:state.destination==='moon'?[0,14,4,1.05]:[0,20,8,4.1];return levels[state.zoom]/Math.min(1,w/h);}
 function pixelRatio(){return graphics.effective.pixelRatio;}
+function skyPixelRatio(){return Math.max(pixelRatio(),Math.min(devicePixelRatio||1,mobile?1.65:2));}
 function applyGraphics(){state.graphics=graphics.effective;for(const env of Object.values(environments)){env.terrain.configureGraphics?.(state.graphics);env.world?.configureGraphics(state.graphics);}state.quality=graphics.settings.profile==='quality'?'high':graphics.settings.profile==='balanced'?'balanced':'auto';resize();save();}
-function resize(){if(!renderer)return;const {w,h}=viewport();renderer.setPixelRatio(pixelRatio());graphicsInfo.pixelRatio=pixelRatio();renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();}
+function resize(){if(!renderer)return;const {w,h}=viewport();renderer.setPixelRatio(skyPixelRatio());graphicsInfo.pixelRatio=pixelRatio();renderer.setSize(w,h,false);landscape?.resize(w,h,pixelRatio(),skyPixelRatio());camera.aspect=w/h;camera.updateProjectionMatrix();}
 window.addEventListener('resize',resize);window.visualViewport?.addEventListener('resize',resize);
 
 async function init(){
   try{
-    renderer=await createRenderer();onGraphicsFailure(failGraphics);renderer.outputColorSpace=globalThis.__skyWebGPU?THREE.LinearSRGBColorSpace:THREE.SRGBColorSpace;renderer.toneMapping=THREE.NoToneMapping;if(renderer.info)renderer.info.autoReset=false;renderer.setClearColor(0x111d25);$('world').appendChild(renderer.domElement);
-    scene=new THREE.Scene();camera=new THREE.PerspectiveCamera(state.fov,innerWidth/innerHeight,.08,18000);camera.coordinateSystem=globalThis.__skyWebGPU?THREE.WebGPUCoordinateSystem:THREE.WebGLCoordinateSystem;camera.updateProjectionMatrix();camera.position.set(0,1.68,0);
+    renderer=await createRenderer();onGraphicsFailure(failGraphics);renderer.outputColorSpace=globalThis.__skyWebGPU?THREE.LinearSRGBColorSpace:THREE.SRGBColorSpace;renderer.toneMapping=THREE.NoToneMapping;if(renderer.info)renderer.info.autoReset=false;renderer.setClearColor(0x111d25);$('world').appendChild(renderer.domElement);landscape=new LandscapeRenderer(renderer);
+    scene=new THREE.Scene();camera=new THREE.PerspectiveCamera(state.fov,innerWidth/innerHeight,.08,18000);camera.coordinateSystem=globalThis.__skyWebGPU?THREE.WebGPUCoordinateSystem:THREE.WebGLCoordinateSystem;camera.updateProjectionMatrix();camera.position.set(0,1.68,0);camera.layers.enable(1);
     const moon=await new THREE.TextureLoader().loadAsync(new URL('./moon.jpg?v=4.0.0',import.meta.url).href);moon.colorSpace=THREE.NoColorSpace;moon.anisotropy=Math.min(renderer.capabilities.getMaxAnisotropy(),4);moon.minFilter=THREE.LinearMipmapLinearFilter;
     sky=new Sky(scene,moon);terrain=new Terrain(scene,mobile);terrain.configureGraphics(state.graphics);audio=new Ambience();audio.setVolume(state.volume);
     walker=new Walker(camera,renderer.domElement,s=>audio.step(s),()=>toast(state.destination==='moon'?'Has llegado al límite de exploración. Sigue en otra dirección.':'Has llegado al límite de la pradera. Puedes seguir en otra dirección.'));walker.bindJoystick($('joystick'),$('joy-thumb'));walker.sway=state.sway;walker.speed=state.speed;
     walker.onJump=()=>{if(!vehicle?.mounted)audio.jump();};walker.onLand=impact=>vehicle?.mounted?motor.land(impact):audio.land(impact);
     vehicle=new Vehicle(scene);motor=new VehicleSound(audio);state.vehicleLighting=vehicle.lighting;environments.earth={scene,sky,terrain,audio,vehicle,motor,preview:moon.image,saved:null};
     walker.onLook=()=>{$('look-hint').style.opacity='0';};
-    setupMoonPreview(moon.image);bindUI();expedition=new Expedition({state,camera,walker,renderer,inventory,getEnv:()=>environments[state.destination],toast,setScope,setZoom,setInventory});expedition.activate();syncPreferences();registerSkyTools();resize();walker.update(0);sky.update(camera,state,0,pixelRatio());terrain.update(camera,sky,0);expedition.update(0,0,pixelRatio());environments[state.destination].world.lights.prepare(renderer,environments[state.destination].world,camera);await compileScene(renderer,scene,camera);renderer.render(scene,camera);expedition?.renderOverlay();
+    setupMoonPreview(moon.image);bindUI();expedition=new Expedition({state,camera,walker,renderer,inventory,getEnv:()=>environments[state.destination],toast,setScope,setZoom,setInventory});expedition.activate();syncPreferences();registerSkyTools();resize();walker.update(0);sky.update(camera,state,0,skyPixelRatio());terrain.update(camera,sky,0);expedition.update(0,0,skyPixelRatio());environments[state.destination].world.lights.prepare(renderer,environments[state.destination].world,camera);await compileScene(renderer,scene,camera);landscape.render(scene,camera);expedition?.renderOverlay();
     graphicsInfo.ready=true;$('enter').disabled=false;$('enter-label').textContent='Explorar';$('moon-destination').disabled=false;$('moon-enter-label').textContent='Explorar';
     renderer.domElement.addEventListener('webglcontextlost',e=>{e.preventDefault();contextLost=true;cancelAnimationFrame(raf);walker.resetInput();audio.pause();toast('Recuperando el paisaje…');});
-    renderer.domElement.addEventListener('webglcontextrestored',()=>{contextLost=false;for(const env of Object.values(environments))env.terrain.lightCache?.invalidate();frameTime=0;if(state.active)audio.start();raf=requestAnimationFrame(frame);});
+    renderer.domElement.addEventListener('webglcontextrestored',()=>{contextLost=false;for(const env of Object.values(environments)){env.terrain.lightCache?.invalidate();env.world?.lights.shadows.release();}landscape.release();resize();frameTime=nextFrame=0;if(state.active)audio.start();raf=requestAnimationFrame(frame);});
     document.addEventListener('visibilitychange',()=>{if(document.hidden){graphics.resetSamples();cancelAnimationFrame(raf);walker.resetInput();audio.pause();frameTime=0;}else if(!contextLost){if(state.active)audio.start();raf=requestAnimationFrame(frame);}});
     raf=requestAnimationFrame(frame);
   }catch(e){if(failGraphics(e))return;console.error(e);$('loading-error').hidden=false;$('loading-error').textContent=/WebGL/i.test(e.message)?'Este navegador no pudo iniciar los gráficos 3D. Prueba abrir la página en Safari o Chrome con la aceleración gráfica disponible.':'No se pudo abrir el paisaje. Comprueba que subiste todos los archivos juntos y abre la dirección de GitHub Pages en Safari o Chrome actualizado.';$('enter-label').textContent='No disponible';}
 }
-async function prepareMoon(){
-  if(environments.moon)return environments.moon;
-  const loader=new THREE.TextureLoader();
-  const [earth,height,regolith]=await Promise.all(['earth.jpg','lunar-height.png','regolith.jpg'].map(name=>loader.loadAsync(new URL('./'+name+'?v=4.0.0',import.meta.url).href)));
-  earth.colorSpace=THREE.NoColorSpace;earth.anisotropy=Math.min(renderer.capabilities.getMaxAnisotropy(),8);earth.wrapS=THREE.RepeatWrapping;
-  const lunarScene=new THREE.Scene(),lunarSky=new LunarSky(lunarScene,environments.earth.sky,earth),lunarTerrain=new LunarTerrain(lunarScene,height,regolith,mobile);lunarSky.terrain=lunarTerrain;lunarTerrain.configureGraphics(state.graphics);
-  const lunarVehicle=new Vehicle(lunarScene,{lunar:true,heightAt:(x,z)=>lunarTerrain.heightAt(x,z),terrain:lunarTerrain});
-  return environments.moon={motor:new VehicleSound(lunarAudio,true),vehicle:lunarVehicle,scene:lunarScene,sky:lunarSky,terrain:lunarTerrain,audio:lunarAudio,preview:earth.image,saved:{hour:8.6,phase:.25,targetPhase:.25,path:0,pos:null,yaw:-1.8,pitch:.23}};
+async function prepareDestination(destination,nextAudio){
+  const lunar=destination==='moon',loader=new THREE.TextureLoader();
+  const names=lunar?['earth.jpg','lunar-height.png','regolith.jpg']:['moon.jpg'];
+  const loaded=[];
+  try{
+   await Promise.all(names.map(async(name,i)=>{loaded[i]=await loader.loadAsync(new URL('./'+name+'?v=4.0.0',import.meta.url).href);}));
+   const texture=loaded[0];texture.colorSpace=THREE.NoColorSpace;texture.anisotropy=Math.min(renderer.capabilities.getMaxAnisotropy(),lunar?8:4);if(lunar)texture.wrapS=THREE.RepeatWrapping;
+   const nextScene=new THREE.Scene();let nextSky;
+   if(lunar){
+    // Only the shared astronomical template, never Earth's terrain/vehicle.
+    const template=new Sky(new THREE.Scene(),texture);nextSky=new LunarSky(nextScene,template,texture);
+    for(const object of [template.atmosphere,template.milkyWay,template.stars,template.moonMesh])object.material.dispose();
+   }else nextSky=new Sky(nextScene,texture);
+   const nextTerrain=lunar?new LunarTerrain(nextScene,loaded[1],loaded[2],mobile):new Terrain(nextScene,mobile);if(lunar)nextSky.terrain=nextTerrain;nextTerrain.configureGraphics(state.graphics);
+   const nextVehicle=new Vehicle(nextScene,{lunar,heightAt:(x,z)=>nextTerrain.heightAt?.(x,z)||0,terrain:lunar?nextTerrain:null});
+   return environments[destination]={scene:nextScene,sky:nextSky,terrain:nextTerrain,audio:nextAudio,vehicle:nextVehicle,motor:new VehicleSound(nextAudio,lunar),preview:texture.image};
+  }catch(error){for(const texture of loaded)texture?.dispose();throw error;}
 }
 async function enterDestination(destination){
   if(switching)return;expedition?.exitSeat();if(state.expeditionPanel)expedition.closeDialog();expedition?.clearPreview();if(state.inventory)setInventory(false);if(vehicle?.mounted)leaveVehicle(true);switching=true;$('enter').disabled=true;$('moon-destination').disabled=true;
-  const nextAudio=destination==='moon'?lunarAudio:environments.earth.audio;nextAudio.setVolume(state.volume);
+  const existing=environments[destination],nextAudio=existing?.audio||(destination==='moon'?new LunarAmbience():new Ambience());nextAudio.setVolume(state.volume);nextAudio.setMuted(destinationSaves[destination]?.muted??audio?.muted??false);
   // Resume within the initiating tap, before loading any local texture (iOS).
-  const audible=nextAudio.start();if(audio!==nextAudio)audio.pause();
+  const audible=nextAudio.start();
   $('fade').classList.add('on');$('loading-error').hidden=true;
+  const progress=$('destination-loading');progress.hidden=false;progress.textContent='Preparando '+(destination==='moon'?'la Luna':'la Tierra')+'…';
   try{
-    if(destination==='moon'){$('moon-enter-label').textContent='Abriendo…';await new Promise(resolve=>requestAnimationFrame(resolve));await prepareMoon();}
-    if(destination!==state.destination){const old=environments[state.destination];old.saved={hour:state.hour,phase:state.phase,targetPhase:state.targetPhase,path:state.path,pos:walker.pos.clone(),yaw:walker.yaw,pitch:walker.pitch};
-      const env=environments[destination];scene=env.scene;sky=env.sky;terrain=env.terrain;graphicsInfo.world=destination;audio=env.audio;vehicle=env.vehicle;motor=env.motor;state.vehicleLighting=vehicle.lighting;state.destination=destination;
-      const saved=env.saved;if(saved){Object.assign(state,{hour:saved.hour,phase:saved.phase,targetPhase:saved.targetPhase,path:saved.path});}
+    if(destination!==state.destination||!existing){
+      state.active=false;walker.enabled=false;walker.resetInput();
+      const old=environments[state.destination];
+      if(old){destinationSaves[state.destination]=environmentSnapshot(old,state,walker);expedition.laser.root.removeFromParent();expedition.lastEnvironment=null;expedition.target=expedition.near=expedition.aimedLamp=null;expedition.visor.visible=[];releaseEnvironment(old,renderer);delete environments[state.destination];}
+      landscape.release();scene=sky=terrain=vehicle=motor=null;state.vehicleLighting=null;previewBuffer=phaseImageData=null;state.destination=destination;
+      await new Promise(resolve=>requestAnimationFrame(resolve));
+      const env=await prepareDestination(destination,nextAudio);scene=env.scene;sky=env.sky;terrain=env.terrain;audio=env.audio;vehicle=env.vehicle;motor=env.motor;state.vehicleLighting=vehicle.lighting;
+      const saved=destinationSaves[destination]||{hour:destination==='moon'?8.6:17.8,phase:destination==='moon'?.25:.17,targetPhase:destination==='moon'?.25:.17,path:0,pos:null,yaw:destination==='moon'?-1.8:0,pitch:.23};
+      Object.assign(state,{hour:saved.hour,phase:saved.phase,targetPhase:saved.targetPhase,path:saved.path});
       walker.setEnvironment(destination==='moon'?(x,z)=>terrain.heightAt(x,z):null,destination==='moon'?MOON_GRAVITY:9.80665);
-      if(saved){if(saved.pos){walker.pos.copy(saved.pos);walker.pos.y=walker.groundHeight(walker.pos.x,walker.pos.z)+1.68;}walker.yaw=saved.yaw;walker.pitch=saved.pitch;}
-      setupMoonPreview(env.preview);
+      expedition.attach(env);if(saved.data)env.world.load(saved.data);env.world.history=saved.history||[];env.world.future=saved.future||[];
+      if(saved.vehicle){vehicle.heading=saved.vehicle.heading;vehicle.position.fromArray(saved.vehicle.position);vehicle.lightMode=saved.vehicle.lightMode;vehicle.parkAt(vehicle.position.x,vehicle.position.z);vehicle.updateLighting(0);}
+      if(saved.pos)walker.pos.fromArray(saved.pos);walker.yaw=saved.yaw;walker.pitch=saved.pitch;walker.pos.y=env.world.support(walker.pos.x,walker.pos.z,walker.pos.y-1.68)+1.68;
+      setupMoonPreview(env.preview);resize();
     }
+    graphicsInfo.world=destination;graphicsInfo.residentWorlds=Object.keys(environments);
     state.active=true;state.playing=false;targetHour=null;state.zoomReveal=0;walker.enabled=true;walker.resetInput();setFlashlight(false);setZoom(0);camera.fov=state.fov;camera.updateProjectionMatrix();
     expedition.activate();applyDestinationUI();syncVehicleUI();hideUI(false);$('hud').hidden=false;$('welcome').classList.add('leaving');setTimeout(()=>$('welcome').hidden=true,780);$('world').focus({preventScroll:true});
     await audible;audio.setVolume(state.volume);icon($('sound-button'),audio.muted?'mute':'volume');$('sound-button').setAttribute('aria-pressed',!audio.muted);$('sound-button').setAttribute('aria-label',audio.muted?'Activar ambiente':'Silenciar ambiente');
-    walker.update(0);sky.update(camera,state,elapsed,pixelRatio());expedition.update(elapsed,0,pixelRatio());environments[state.destination].world.lights.prepare(renderer,environments[state.destination].world,camera);terrain.prepareLighting?.(renderer,camera,sky);terrain.update(camera,sky,elapsed,state);await compileScene(renderer,scene,camera);renderer.render(scene,camera);expedition?.renderOverlay();expedition.guide.firstVisit();
+    walker.update(0);sky.update(camera,state,elapsed,skyPixelRatio());expedition.update(elapsed,0,skyPixelRatio());environments[state.destination].world.lights.prepare(renderer,environments[state.destination].world,camera);terrain.prepareLighting?.(renderer,camera,sky);terrain.update(camera,sky,elapsed,state);await compileScene(renderer,scene,camera);landscape.render(scene,camera);expedition?.renderOverlay();expedition.guide.firstVisit();
     requestAnimationFrame(()=>$('fade').classList.remove('on'));setTimeout(()=>{$('look-hint').style.opacity='0';},8500);
-  }catch(error){if(failGraphics(error))return;console.error(error);nextAudio.pause();$('loading-error').hidden=false;$('loading-error').textContent='No se pudo abrir este paisaje. Revisa que todos los archivos del ZIP estén juntos.';$('fade').classList.remove('on');}
-  finally{switching=false;$('enter').disabled=false;$('moon-destination').disabled=false;$('moon-enter-label').textContent='Explorar';}
+  }catch(error){if(failGraphics(error))return;console.error(error);nextAudio.pause();state.active=false;walker.enabled=false;$('welcome').hidden=false;$('welcome').classList.remove('leaving');$('hud').hidden=true;$('loading-error').hidden=false;$('loading-error').textContent='No se pudo abrir este paisaje. Revisa que todos los archivos del ZIP estén juntos.';$('fade').classList.remove('on');}
+  finally{switching=false;frameTime=nextFrame=0;progress.hidden=true;$('enter').disabled=false;$('moon-destination').disabled=false;$('moon-enter-label').textContent='Explorar';}
 }
 function setFlashlight(on){state.flashlight=Boolean(on)&&!vehicle?.mounted;$('flashlight-setting').checked=state.flashlight;$('flashlight-button').setAttribute('aria-pressed',state.flashlight);$('flashlight-button').setAttribute('aria-label',state.flashlight?'Apagar linterna':'Encender linterna');}
 function useLight(){
@@ -293,7 +314,13 @@ function frame(now){
  try{renderFrame(now);}catch(error){if(!failGraphics(error)){cancelAnimationFrame(raf);console.error(error);toast('No se pudo dibujar el paisaje. Recarga para recuperarlo.');}}
 }
 function renderFrame(now){
-  if(document.hidden||contextLost)return;raf=requestAnimationFrame(frame);if(switching){frameTime=0;return;}const raw=frameTime?(now-frameTime)/1000:1/60;const dt=Math.min(.05,raw);frameTime=now;elapsed+=dt;
+  if(document.hidden||contextLost)return;raf=requestAnimationFrame(frame);if(switching||!scene){frameTime=nextFrame=0;return;}
+  // ProMotion callbacks may arrive at 120 Hz. Submit at most 60 actual game
+  // frames; menus need only 30 and the inactive destination selector only 20.
+  const interval=1000/(!state.active?20:state.panel||state.inventory||state.expeditionPanel?30:60);
+  if(interval!==frameInterval){frameInterval=interval;nextFrame=now;frameTime=0;}
+  if(now+.35<nextFrame)return;if(now-nextFrame>interval)nextFrame=now;nextFrame+=interval;
+  const raw=frameTime?(now-frameTime)/1000:1/60;const dt=Math.min(.05,raw);frameTime=now;elapsed+=dt;
   if(targetHour){targetHour.elapsed+=dt;const p=clamp(targetHour.elapsed/(targetHour.duration||.9)),s=p*p*(3-2*p);state.hour=cycleHour(targetHour.from+(targetHour.to-targetHour.from)*s);if(p===1)targetHour=null;}
   else if(state.active&&state.playing)state.hour=cycleHour(state.hour+state.direction*Math.min(raw,1)*24/(state.duration*60));
   if(state.destination==='earth'){state.phase+=(state.targetPhase-state.phase)*(1-Math.exp(-dt*10));if(Math.abs(state.targetPhase-state.phase)<.00001)state.phase=state.targetPhase;}
@@ -302,15 +329,16 @@ function renderFrame(now){
   walker.sensitivity=state.scope?Math.max(.008,Math.tan(camera.fov*Math.PI/360)/Math.tan(state.fov*Math.PI/360)):1;expedition.beforeMotion();walker.update(dt);expedition.afterMotion();
   if(!vehicle.mounted){vehicle.integrate(dt,0,0,state.active&&!state.panel&&!state.inventory);if(!walker.driver)vehicle.collideWalker(walker);if(!walker.driver){camera.position.x=walker.pos.x;camera.position.z=walker.pos.z;}}
   vehicle.updateLighting(dt);state.headlightExposure=Math.max(vehicle.exposure(camera),environments[state.destination].world.lights.exposure(camera));
-  renderer.info?.reset?.();sky.update(camera,state,elapsed,pixelRatio());expedition.update(elapsed,dt,pixelRatio());environments[state.destination].world.lights.prepare(renderer,environments[state.destination].world,camera);terrain.prepareLighting?.(renderer,camera,sky);terrain.update(camera,sky,elapsed,state);vehicle.updateAppearance(sky,camera,state,dt);audio.update(elapsed,sky.night,state.hour);motor.update(vehicle);updateVehiclePrompt();renderer.render(scene,camera);expedition?.renderOverlay();
+  renderer.info?.reset?.();sky.update(camera,state,elapsed,skyPixelRatio());expedition.update(elapsed,dt,skyPixelRatio());environments[state.destination].world.lights.prepare(renderer,environments[state.destination].world,camera);terrain.prepareLighting?.(renderer,camera,sky);terrain.update(camera,sky,elapsed,state);vehicle.updateAppearance(sky,camera,state,dt);audio.update(elapsed,sky.night,state.hour);motor.update(vehicle);updateVehiclePrompt();landscape.render(scene,camera);expedition?.renderOverlay();
   uiTime+=dt;if(uiTime>.12){uiTime=0;updateReadouts();updateVehicleUI();}
+  graphicsInfo.skyPixelRatio=skyPixelRatio();graphicsInfo.residentWorlds=Object.keys(environments);graphicsInfo.frameLimit=1000/frameInterval;
   graphicsInfo.cachedShadows=environments[state.destination].world.lights.u.baseShadowReady.value>.5;
-  graphics.sample(raw,state.active);graphics.updateHUD(now,renderer,graphicsInfo);
+  graphics.sample(raw,state.active&&!state.panel&&!state.inventory&&!state.expeditionPanel);graphics.updateHUD(now,renderer,graphicsInfo);
 
 }
 window.addEventListener('sky-before-update',()=>{save();inventory?.save();expedition?.science.save();for(const env of Object.values(environments))env.world?.save();});
 function registerSkyTools(){
-  window.addEventListener('expedition-import',()=>{for(const [name,env] of Object.entries(environments)){const data=localStorage.getItem('sky-expedition-world-'+name+'-v1');if(data&&env.world)env.world.load(JSON.parse(data));if(env.celestial)env.celestial.setDate(localStorage.getItem('sky-expedition-date'));}expedition.activate();});
+  window.addEventListener('expedition-import',()=>{for(const name of Object.keys(destinationSaves))delete destinationSaves[name];for(const [name,env] of Object.entries(environments)){const data=localStorage.getItem('sky-expedition-world-'+name+'-v1');if(data&&env.world)env.world.load(JSON.parse(data));if(env.celestial)env.celestial.setDate(localStorage.getItem('sky-expedition-date'));}expedition.activate();});
   const context=document.modelContext;if(!context?.registerTool)return;
   const lifecycle=new AbortController();window.addEventListener('pagehide',()=>lifecycle.abort(),{once:true});
   const snapshot=()=>({destination:state.active?state.destination:'selector',hour:Number(state.hour.toFixed(3)),phase:Number(state.phase.toFixed(3)),playing:state.playing,telescope:state.scope,zoom:state.zoom});

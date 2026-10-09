@@ -1,6 +1,6 @@
 import * as THREE from './three.module.js?v=4.0.0';
 
-export const RELEASE='4.1.1-shadow-cache';
+export const RELEASE='4.1.2-luz-y-cielo';
 const recoveryKey='sky-renderer-recovery-'+RELEASE;
 export const graphicsInfo={version:RELEASE,three:THREE.REVISION,renderer:'Iniciando',reason:'',ready:false,world:'earth',pixelRatio:1,averageFrameMs:null,drawCalls:null};
 window.SkyDiagnostics=graphicsInfo;
@@ -18,7 +18,7 @@ export async function createRenderer(){
  if(!reason&&navigator.gpu&&isSecureContext){
   let candidate;
   try{
-   const [{WebGPURenderer},{installMaterials}]=await Promise.all([import('./three.webgpu.js?v=4.0.0'),import('./gpu-adapter.js?v=4.1.1')]);
+   const [{WebGPURenderer},{installMaterials}]=await Promise.all([import('./three.webgpu.js?v=4.0.0'),import('./gpu-adapter.js?v=4.1.2')]);
    candidate=new WebGPURenderer({antialias:true,alpha:false,powerPreference:'high-performance'});
    await candidate.init();
    if(!candidate.backend.isWebGPUBackend)throw new Error('WebGPU no obtuvo un dispositivo compatible');

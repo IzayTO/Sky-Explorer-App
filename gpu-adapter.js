@@ -1,6 +1,6 @@
 import { MeshBasicNodeMaterial, LineBasicNodeMaterial } from './three.webgpu.js?v=4.0.0';
 import { reference, texture, sRGBTransferOETF } from './three.tsl.js?v=4.0.0';
-import { materials } from './gpu-materials.js?v=4.1.1';
+import { materials } from './gpu-materials.js?v=4.1.2';
 const converted = new WeakMap();
 const properties=['side','transparent','opacity','blending','blendSrc','blendDst','blendEquation','blendSrcAlpha','blendDstAlpha','blendEquationAlpha','depthTest','depthWrite','depthFunc','colorWrite','polygonOffset','polygonOffsetFactor','polygonOffsetUnits','visible','alphaToCoverage','premultipliedAlpha','forceSinglePass'];
 export function shaderKey(material){const source=material.vertexShader+'\n'+material.fragmentShader;let h=2166136261;for(let i=0;i<source.length;i++)h=Math.imul(h^source.charCodeAt(i),16777619);return(h>>>0).toString(16);}
@@ -17,7 +17,11 @@ export function nodeMaterial(source){
   }else{
   const key=shaderKey(source),factory=materials[key];
   if(!factory)throw new Error('Shader WebGPU sin migración: '+key);
-  const bind=(name,type,count)=>{const value=source.uniforms[name];if(!value)throw new Error('Uniform ausente: '+name);if(type==='sampler2D'){const node=texture(value.value);node.setUpdateMatrix(false);textures.push({node,uniform:value});return node;}return reference('value',type,value);};
+  const bind=(name,type,count)=>{const value=source.uniforms[name];if(!value)throw new Error('Uniform ausente: '+name);if(type==='sampler2D'){const node=texture(value.value);node.setUpdateMatrix(false);textures.push({node,uniform:value});return node;}
+   // A GLSL vec3 may be backed by THREE.Color. TSL vec3 uploads x/y/z;
+   // Color supplies r/g/b. Using vec3 here uploaded NaN for lamp emission.
+   return reference('value',value.value?.isColor||value.value?.[0]?.isColor?'color':type,value);
+  };
   const {vertex,fragment}=factory(bind);
   target=new MeshBasicNodeMaterial();target.vertexNode=vertex;target.fragmentNode=fragment;
   // The legacy shaders already emit display RGB (including their own gamma).

@@ -3,7 +3,7 @@ export const PERFORMANCE_KEY='sky-performance-prefs-v1';
 export const GRAPHICS_DEFAULTS=Object.freeze({profile:'auto',grass:true,density:'full',shadows:true,advancedSky:true,resolution:'auto',distance:'high',fps:false});
 const PRESETS={
  auto:{density:'full',shadows:true,advancedSky:true,resolution:'auto',distance:'high'},
- performance:{density:'low',shadows:false,advancedSky:false,resolution:'auto',distance:'low'},
+ performance:{density:'low',shadows:false,advancedSky:true,resolution:'auto',distance:'low'},
  balanced:{density:'medium',shadows:true,advancedSky:true,resolution:'auto',distance:'medium'},
  quality:{density:'full',shadows:true,advancedSky:true,resolution:'auto',distance:'high'}
 };
@@ -21,10 +21,13 @@ export class PerformanceSettings{
   Object.assign(this,{storage,mobile,deviceRatio,onChange});
   let saved=null;try{saved=JSON.parse(storage?.getItem(PERFORMANCE_KEY)||'null');}catch{}
   this.settings=validateGraphics(saved||{...GRAPHICS_DEFAULTS,profile:legacyQuality==='high'?'quality':legacyQuality==='balanced'?'balanced':'auto',...(legacyQuality==='balanced'?PRESETS.balanced:{})});
+  // Older Performance presets disabled the sky as a side effect. Restore it
+  // once; subsequent explicit choices (including sky off) remain respected.
+  if(saved?.profile==='performance'&&saved.version!==2){this.settings.advancedSky=true;this.save();}
   this.scale=1;this.tier=0;this.sum=0;this.count=0;this.windowTime=0;this.pressure=0;this.headroom=0;this.lastHUD=0;this.averageMs=null;
   this.effective={};this.resolve();
  }
- save(){try{this.storage?.setItem(PERFORMANCE_KEY,JSON.stringify(this.settings));}catch{}}
+ save(){try{this.storage?.setItem(PERFORMANCE_KEY,JSON.stringify({...this.settings,version:2}));}catch{}}
  set(key,value){
   if(!(key in GRAPHICS_DEFAULTS))return;
   const next=validateGraphics({...this.settings,[key]:value});
@@ -38,13 +41,14 @@ export class PerformanceSettings{
  resetSamples(){this.sum=this.count=this.windowTime=this.pressure=this.headroom=0;}
  resolve(){
   const s=this.settings,e=this.effective,automatic=s.profile==='auto';
-  const cap=s.profile==='quality'?2:s.profile==='performance'?1.1:s.profile==='balanced'?1.4:(this.mobile?1.65:2);
+  const cap=s.profile==='quality'?(this.mobile?1.65:2):s.profile==='performance'?1.1:s.profile==='balanced'?1.4:(this.mobile?1.65:2);
   const manual={low:.9,medium:1.25,high:1.65};
   e.pixelRatio=s.resolution==='auto'?Math.min(this.deviceRatio,cap)*this.scale:Math.min(this.deviceRatio,manual[s.resolution]);
   e.grass=s.grass;e.density=density[s.density]*(automatic?(this.tier===2?.55:this.tier===1?.78:1):1);
   e.grassRange=Math.min(range[s.distance],automatic&&this.tier===2?14:18);
   e.shadows=s.shadows;e.advancedSky=s.advancedSky;e.distance=s.distance;
-  e.lights=s.profile==='performance'?2:automatic&&this.tier===2?3:4;
+  // Cache capacity is not a visibility/illumination limit.
+  e.lights=4;
   e.fps=s.fps;
   return e;
  }

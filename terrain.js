@@ -1,6 +1,6 @@
 import * as THREE from './three.module.js?v=4.0.0';
-import {worldLightGLSL,worldUniforms} from './world-lighting.js?v=4.1.1';
-import {flashlightGLSL,vehicleLightGLSL,vehicleLightUniforms,updateVehicleLightUniforms} from './flashlight.js?v=4.1.1';
+import {worldLightGLSL,worldUniforms} from './world-lighting.js?v=4.1.2';
+import {flashlightGLSL,vehicleLightGLSL,vehicleLightUniforms,updateVehicleLightUniforms} from './flashlight.js?v=4.1.2';
 // Continuous flat ground, with nearby instanced grass. The shader shades distant
 // detail analytically: no tiling photograph, loaded model, shadow atlas or edge.
 const common=`

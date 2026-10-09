@@ -1,6 +1,6 @@
 // Generated from the project's exact GLSL equations with Three.js r186 GLSLDecoder/TSLEncoder.
 // Build-time only: no shader transpiler is downloaded or executed on iPhone.
-import {vec4,float,mat3,Fn,max,pow,vec3,mix,length,dot,clamp,exp,mul,add,sub,smoothstep,cross,atan,fwidth,If,normalize,vec2,fract,varying,floor,sin,select,time,attribute,Discard,sqrt,asin,cos,min,step,sign,abs,mod,div,bool,Continue,Loop,uv,int,Break,mat2,modelViewMatrix,distance,dFdx,dFdy,cameraProjectionMatrix,cameraViewMatrix,modelWorldMatrix,modelViewMatrix as modelViewMatrixNode,viewportSize,screenCoordinate} from './three.tsl.js?v=4.0.0';
+import {vec4,float,mat3,Fn,max,pow,vec3,mix,length,dot,clamp,exp,mul,add,sub,smoothstep,cross,atan,fwidth,If,normalize,vec2,fract,varying,floor,sin,select,time,attribute,Discard,sqrt,asin,cos,min,step,sign,abs,mod,div,bool,Continue,Loop,uv,int,color,Break,mat2,modelViewMatrix,distance,dFdx,dFdy,screenUV,cameraProjectionMatrix,cameraViewMatrix,modelWorldMatrix,modelViewMatrix as modelViewMatrixNode,viewportSize,screenCoordinate} from './three.tsl.js?v=4.0.0';
 // 0: earth Mesh
 export function material_52462404(bind){
 const position=attribute('position','vec3'),normal=attribute('normal','vec3'),uv=attribute('uv','vec2');
@@ -232,7 +232,7 @@ return skyFragment(vRay,skyPixel,skyPointUV);})();
 return {vertex,fragment};
 }
 // 2: earth Points
-export function material_c8c01696(bind){
+export function material_f6d6f2f5(bind){
 const position=attribute('position','vec3'),normal=attribute('normal','vec3'),uv=attribute('uv','vec2');
 const projectionMatrix=cameraProjectionMatrix,viewMatrix=cameraViewMatrix,modelMatrix=modelWorldMatrix,modelViewMatrix=modelViewMatrixNode;
 const skyViewport=viewportSize,quadCorner=attribute('quadCorner','vec2'),skyPointUV=vec2(uv.x,uv.y.oneMinus()),skyPixel=vec3(screenCoordinate.x,viewportSize.y.sub(screenCoordinate.y),0);
@@ -268,7 +268,7 @@ const skyVertex = /*@__PURE__*/ Fn( () => {
 	const dir = mat3( field ).mul( position ).toVar();
 	const vd = mat3( viewMatrix ).mul( dir ).toVar();
 	const projected = projectionMatrix.mul( vec4( vd, 1. ) ).toVar();
-	skyPosition.assign( select( projected.w.greaterThan( 0. ), vec4( projected.xy, projected.w.mul( .99999 ), projected.w ), vec4( 2., 2., 2., 1. ) ) );
+	skyPosition.assign( select( projected.w.greaterThan( 0. ), vec4( projected.xy, projected.w, projected.w ), vec4( 2., 2., 2., 1. ) ) );
 	const visible = sub( 1., smoothstep( starLimit.sub( .5 ), starLimit.add( .22 ), magnitude ) ).toVar();
 	const strength = pow( 10., float(-.17).mul( magnitude.sub( 1. ) ) ).toVar();
 	const twilightVis = sub( 1., smoothstep( - .24, .04, sunDirection.y ) ).toVar();
@@ -477,7 +477,7 @@ return skyFragment(vRay,skyPixel,skyPointUV);})();
 return {vertex,fragment};
 }
 // 4: earth Mesh
-export function material_b0d9a715(bind){
+export function material_54d1c0f(bind){
 const position=attribute('position','vec3'),normal=attribute('normal','vec3'),uv=attribute('uv','vec2');
 const projectionMatrix=cameraProjectionMatrix,viewMatrix=cameraViewMatrix,modelMatrix=modelWorldMatrix,modelViewMatrix=modelViewMatrixNode;
 const skyViewport=viewportSize,quadCorner=attribute('quadCorner','vec2'),skyPointUV=vec2(0),skyPixel=vec3(screenCoordinate.x,viewportSize.y.sub(screenCoordinate.y),0);
@@ -509,6 +509,9 @@ const baseLightCount=bind("baseLightCount","int",0);
 const baseNodeCount=bind("baseNodeCount","int",0);
 const baseTree=bind("baseTree","sampler2D",0);
 const baseTreeSize=bind("baseTreeSize","vec2",0);
+const baseLightGrid=bind("baseLightGrid","sampler2D",0);
+const baseLightData=bind("baseLightData","sampler2D",0);
+const baseLightDataSize=bind("baseLightDataSize","vec2",0);
 const baseShadowAtlas=bind("baseShadowAtlas","sampler2D",0);
 const baseShadowReady=bind("baseShadowReady","float",0);
 const baseShadowMatrices=bind("baseShadowMatrices","mat4",32);
@@ -563,6 +566,9 @@ baseLightCount.toStack();
 baseNodeCount.toStack();
 baseTree.sample( vec2(0) ).toStack();
 baseTreeSize.toStack();
+baseLightGrid.sample( vec2(0) ).toStack();
+baseLightData.sample( vec2(0) ).toStack();
+baseLightDataSize.toStack();
 baseShadowAtlas.sample( vec2(0) ).toStack();
 baseShadowReady.toStack();
 baseShadowMatrices.element(0).toStack();
@@ -960,6 +966,12 @@ const baseCubeFace = /*@__PURE__*/ Fn( ( [ p ] ) => {
 
 const baseLocalVisibility = /*@__PURE__*/ Fn( ( [ p, dir, limit, slot ] ) => {
 
+	If( slot.lessThan( 0 ), () => {
+
+		return baseVisibility( p, dir, limit );
+
+	} );
+
 	const visibility = shadowAtSlot( p, dir, limit, slot ).toVar();
 
 	If( visibility.lessThan( 0. ), () => {
@@ -981,37 +993,84 @@ const basePointVisibility = /*@__PURE__*/ Fn( ( [ p, normal, emitter, slot ] ) =
 
 }, { p: 'vec3', normal: 'vec3', emitter: 'vec3', slot: 'int', return: 'float' } );
 
+const readBaseLight = /*@__PURE__*/ Fn( ( [ index ] ) => {
+
+	return baseLightData.sample( vec2( mod( index, baseLightDataSize.x ), floor( index.div( baseLightDataSize.x ) ) ).add( .5 ).div( baseLightDataSize ) );
+
+}, { index: 'float', return: 'vec4' } );
+
+const oneBaseLight = /*@__PURE__*/ Fn( ( [ p, n, emitter, color, cacheSlot ] ) => {
+
+	const d = emitter.sub( p ).toVar();
+	const squared = dot( d, d ).toVar();
+
+	If( squared.greaterThanEqual( 144. ), () => {
+
+		return vec3( 0. );
+
+	} );
+
+	const len = sqrt( squared ).toVar();
+	const fall = sub( 1., len.div( 12. ) ).toVar();
+	const direction = d.div( max( len, .001 ) ).toVar();
+	const slot = select( cacheSlot.lessThan( 0 ), int( - 1 ), add( 4, cacheSlot.mul( 6 ) ).add( baseCubeFace( d.negate() ) ) ).toVar();
+
+	return color.rgb.mul( color.a ).mul( fall ).mul( fall ).mul( add( .18, mul( .82, max( dot( n, direction ), 0. ) ) ) ).mul( baseLocalVisibility( p.add( n.mul( .012 ) ), direction, len.sub( .10 ), slot ) );
+
+}, { p: 'vec3', n: 'vec3', emitter: 'vec3', color: 'vec4', cacheSlot: 'int', return: 'vec3' } );
+
 const baseLighting = /*@__PURE__*/ Fn( ( [ p, n ] ) => {
 
 	const light = vec3( 0. ).toVar();
 
-	Loop( 4, ( { i } ) => {
+	If( baseLightCount.equal( 0 ), () => {
 
-		If( i.greaterThanEqual( baseLightCount ), () => {
+		return light;
 
-			Break();
+	} );
+
+	If( baseLightCount.lessThanEqual( 4 ), () => {
+
+		Loop( 4, ( { i } ) => {
+
+			If( i.greaterThanEqual( baseLightCount ), () => {
+
+				Break();
+
+			} );
+
+			light.addAssign( oneBaseLight( p, n, baseLights.element( i ).xyz, baseColors.element( i ), i ) );
 
 		} );
 
-		const d = baseLights.element( i ).xyz.sub( p ).toVar();
-		const squared = dot( d, d ).toVar();
-		const range = baseLights.element( i ).w.toVar();
+		return light;
 
-		If( squared.greaterThanEqual( range.mul( range ) ), () => {
+	} );
+
+	const cell = floor( p.xz.add( 640. ).div( 8. ) ).toVar();
+
+	If( min( cell.x, cell.y ).lessThan( 0. ).or( max( cell.x, cell.y ).greaterThanEqual( 160. ) ), () => {
+
+		return light;
+
+	} );
+
+	const list = baseLightGrid.sample( cell.add( .5 ).div( 160. ) ).rg.toVar();
+	const count = int( list.y ).toVar();
+
+	Loop( { start: 0, end: count, name: 'j' }, ( { j } ) => {
+
+		const index = readBaseLight( list.x.add( float( j ) ) ).x.toVar();
+		const emitter = readBaseLight( index.mul( 2. ) ).toVar();
+		const delta = emitter.xyz.sub( p ).toVar();
+
+		If( dot( delta, delta ).greaterThanEqual( 144. ), () => {
 
 			Continue();
 
 		} );
 
-		const len = sqrt( squared ).toVar();
-		const fall = sub( 1., len.div( range ) ).toVar();
-		const direction = d.div( max( len, .001 ) ).toVar();
-
-		If( fall.greaterThan( .001 ), () => {
-
-			light.addAssign( baseColors.element( i ).rgb.mul( baseColors.element( i ).a ).mul( fall ).mul( fall ).mul( add( .18, mul( .82, max( dot( n, direction ), 0. ) ) ) ).mul( baseLocalVisibility( p.add( n.mul( .012 ) ), direction, len.sub( .10 ), add( 4, i.mul( 6 ) ).add( baseCubeFace( d.negate() ) ) ) ) );
-
-		} );
+		light.addAssign( oneBaseLight( p, n, emitter.xyz, readBaseLight( index.mul( 2. ).add( 1. ) ), int( emitter.w ) ) );
 
 	} );
 
@@ -1151,7 +1210,7 @@ return skyFragment(vWorld,skyPixel,skyPointUV);})();
 return {vertex,fragment};
 }
 // 5: earth Mesh
-export function material_73036d1b(bind){
+export function material_a2199d51(bind){
 const position=attribute('position','vec3'),normal=attribute('normal','vec3'),uv=attribute('uv','vec2');
 const projectionMatrix=cameraProjectionMatrix,viewMatrix=cameraViewMatrix,modelMatrix=modelWorldMatrix,modelViewMatrix=modelViewMatrixNode;
 const skyViewport=viewportSize,quadCorner=attribute('quadCorner','vec2'),skyPointUV=vec2(0),skyPixel=vec3(screenCoordinate.x,viewportSize.y.sub(screenCoordinate.y),0);
@@ -1186,6 +1245,9 @@ const baseLightCount=bind("baseLightCount","int",0);
 const baseNodeCount=bind("baseNodeCount","int",0);
 const baseTree=bind("baseTree","sampler2D",0);
 const baseTreeSize=bind("baseTreeSize","vec2",0);
+const baseLightGrid=bind("baseLightGrid","sampler2D",0);
+const baseLightData=bind("baseLightData","sampler2D",0);
+const baseLightDataSize=bind("baseLightDataSize","vec2",0);
 const baseShadowAtlas=bind("baseShadowAtlas","sampler2D",0);
 const baseShadowReady=bind("baseShadowReady","float",0);
 const baseShadowMatrices=bind("baseShadowMatrices","mat4",32);
@@ -1272,6 +1334,9 @@ baseLightCount.toStack();
 baseNodeCount.toStack();
 baseTree.sample( vec2(0) ).toStack();
 baseTreeSize.toStack();
+baseLightGrid.sample( vec2(0) ).toStack();
+baseLightData.sample( vec2(0) ).toStack();
+baseLightDataSize.toStack();
 baseShadowAtlas.sample( vec2(0) ).toStack();
 baseShadowReady.toStack();
 baseShadowMatrices.element(0).toStack();
@@ -1669,6 +1734,12 @@ const baseCubeFace = /*@__PURE__*/ Fn( ( [ p ] ) => {
 
 const baseLocalVisibility = /*@__PURE__*/ Fn( ( [ p, dir, limit, slot ] ) => {
 
+	If( slot.lessThan( 0 ), () => {
+
+		return baseVisibility( p, dir, limit );
+
+	} );
+
 	const visibility = shadowAtSlot( p, dir, limit, slot ).toVar();
 
 	If( visibility.lessThan( 0. ), () => {
@@ -1690,37 +1761,84 @@ const basePointVisibility = /*@__PURE__*/ Fn( ( [ p, normal, emitter, slot ] ) =
 
 }, { p: 'vec3', normal: 'vec3', emitter: 'vec3', slot: 'int', return: 'float' } );
 
+const readBaseLight = /*@__PURE__*/ Fn( ( [ index ] ) => {
+
+	return baseLightData.sample( vec2( mod( index, baseLightDataSize.x ), floor( index.div( baseLightDataSize.x ) ) ).add( .5 ).div( baseLightDataSize ) );
+
+}, { index: 'float', return: 'vec4' } );
+
+const oneBaseLight = /*@__PURE__*/ Fn( ( [ p, n, emitter, color, cacheSlot ] ) => {
+
+	const d = emitter.sub( p ).toVar();
+	const squared = dot( d, d ).toVar();
+
+	If( squared.greaterThanEqual( 144. ), () => {
+
+		return vec3( 0. );
+
+	} );
+
+	const len = sqrt( squared ).toVar();
+	const fall = sub( 1., len.div( 12. ) ).toVar();
+	const direction = d.div( max( len, .001 ) ).toVar();
+	const slot = select( cacheSlot.lessThan( 0 ), int( - 1 ), add( 4, cacheSlot.mul( 6 ) ).add( baseCubeFace( d.negate() ) ) ).toVar();
+
+	return color.rgb.mul( color.a ).mul( fall ).mul( fall ).mul( add( .18, mul( .82, max( dot( n, direction ), 0. ) ) ) ).mul( baseLocalVisibility( p.add( n.mul( .012 ) ), direction, len.sub( .10 ), slot ) );
+
+}, { p: 'vec3', n: 'vec3', emitter: 'vec3', color: 'vec4', cacheSlot: 'int', return: 'vec3' } );
+
 const baseLighting = /*@__PURE__*/ Fn( ( [ p, n ] ) => {
 
 	const light = vec3( 0. ).toVar();
 
-	Loop( 4, ( { i } ) => {
+	If( baseLightCount.equal( 0 ), () => {
 
-		If( i.greaterThanEqual( baseLightCount ), () => {
+		return light;
 
-			Break();
+	} );
+
+	If( baseLightCount.lessThanEqual( 4 ), () => {
+
+		Loop( 4, ( { i } ) => {
+
+			If( i.greaterThanEqual( baseLightCount ), () => {
+
+				Break();
+
+			} );
+
+			light.addAssign( oneBaseLight( p, n, baseLights.element( i ).xyz, baseColors.element( i ), i ) );
 
 		} );
 
-		const d = baseLights.element( i ).xyz.sub( p ).toVar();
-		const squared = dot( d, d ).toVar();
-		const range = baseLights.element( i ).w.toVar();
+		return light;
 
-		If( squared.greaterThanEqual( range.mul( range ) ), () => {
+	} );
+
+	const cell = floor( p.xz.add( 640. ).div( 8. ) ).toVar();
+
+	If( min( cell.x, cell.y ).lessThan( 0. ).or( max( cell.x, cell.y ).greaterThanEqual( 160. ) ), () => {
+
+		return light;
+
+	} );
+
+	const list = baseLightGrid.sample( cell.add( .5 ).div( 160. ) ).rg.toVar();
+	const count = int( list.y ).toVar();
+
+	Loop( { start: 0, end: count, name: 'j' }, ( { j } ) => {
+
+		const index = readBaseLight( list.x.add( float( j ) ) ).x.toVar();
+		const emitter = readBaseLight( index.mul( 2. ) ).toVar();
+		const delta = emitter.xyz.sub( p ).toVar();
+
+		If( dot( delta, delta ).greaterThanEqual( 144. ), () => {
 
 			Continue();
 
 		} );
 
-		const len = sqrt( squared ).toVar();
-		const fall = sub( 1., len.div( range ) ).toVar();
-		const direction = d.div( max( len, .001 ) ).toVar();
-
-		If( fall.greaterThan( .001 ), () => {
-
-			light.addAssign( baseColors.element( i ).rgb.mul( baseColors.element( i ).a ).mul( fall ).mul( fall ).mul( add( .18, mul( .82, max( dot( n, direction ), 0. ) ) ) ).mul( baseLocalVisibility( p.add( n.mul( .012 ) ), direction, len.sub( .10 ), add( 4, i.mul( 6 ) ).add( baseCubeFace( d.negate() ) ) ) ) );
-
-		} );
+		light.addAssign( oneBaseLight( p, n, emitter.xyz, readBaseLight( index.mul( 2. ).add( 1. ) ), int( emitter.w ) ) );
 
 	} );
 
@@ -1844,7 +1962,7 @@ return skyFragment(vWorld,vHeight,vSeed,skyPixel,skyPointUV);})();
 return {vertex,fragment};
 }
 // 6: moon Mesh
-export function material_b69705db(bind){
+export function material_fa8a7b69(bind){
 const position=attribute('position','vec3'),normal=attribute('normal','vec3'),uv=attribute('uv','vec2');
 const projectionMatrix=cameraProjectionMatrix,viewMatrix=cameraViewMatrix,modelMatrix=modelWorldMatrix,modelViewMatrix=modelViewMatrixNode;
 const skyViewport=viewportSize,quadCorner=attribute('quadCorner','vec2'),skyPointUV=vec2(0),skyPixel=vec3(screenCoordinate.x,viewportSize.y.sub(screenCoordinate.y),0);
@@ -1877,6 +1995,9 @@ const baseLightCount=bind("baseLightCount","int",0);
 const baseNodeCount=bind("baseNodeCount","int",0);
 const baseTree=bind("baseTree","sampler2D",0);
 const baseTreeSize=bind("baseTreeSize","vec2",0);
+const baseLightGrid=bind("baseLightGrid","sampler2D",0);
+const baseLightData=bind("baseLightData","sampler2D",0);
+const baseLightDataSize=bind("baseLightDataSize","vec2",0);
 const baseShadowAtlas=bind("baseShadowAtlas","sampler2D",0);
 const baseShadowReady=bind("baseShadowReady","float",0);
 const baseShadowMatrices=bind("baseShadowMatrices","mat4",32);
@@ -1941,6 +2062,9 @@ baseLightCount.toStack();
 baseNodeCount.toStack();
 baseTree.sample( vec2(0) ).toStack();
 baseTreeSize.toStack();
+baseLightGrid.sample( vec2(0) ).toStack();
+baseLightData.sample( vec2(0) ).toStack();
+baseLightDataSize.toStack();
 baseShadowAtlas.sample( vec2(0) ).toStack();
 baseShadowReady.toStack();
 baseShadowMatrices.element(0).toStack();
@@ -2338,6 +2462,12 @@ const baseCubeFace = /*@__PURE__*/ Fn( ( [ p ] ) => {
 
 const baseLocalVisibility = /*@__PURE__*/ Fn( ( [ p, dir, limit, slot ] ) => {
 
+	If( slot.lessThan( 0 ), () => {
+
+		return baseVisibility( p, dir, limit );
+
+	} );
+
 	const visibility = shadowAtSlot( p, dir, limit, slot ).toVar();
 
 	If( visibility.lessThan( 0. ), () => {
@@ -2359,37 +2489,84 @@ const basePointVisibility = /*@__PURE__*/ Fn( ( [ p, normal, emitter, slot ] ) =
 
 }, { p: 'vec3', normal: 'vec3', emitter: 'vec3', slot: 'int', return: 'float' } );
 
+const readBaseLight = /*@__PURE__*/ Fn( ( [ index ] ) => {
+
+	return baseLightData.sample( vec2( mod( index, baseLightDataSize.x ), floor( index.div( baseLightDataSize.x ) ) ).add( .5 ).div( baseLightDataSize ) );
+
+}, { index: 'float', return: 'vec4' } );
+
+const oneBaseLight = /*@__PURE__*/ Fn( ( [ p, n, emitter, color, cacheSlot ] ) => {
+
+	const d = emitter.sub( p ).toVar();
+	const squared = dot( d, d ).toVar();
+
+	If( squared.greaterThanEqual( 144. ), () => {
+
+		return vec3( 0. );
+
+	} );
+
+	const len = sqrt( squared ).toVar();
+	const fall = sub( 1., len.div( 12. ) ).toVar();
+	const direction = d.div( max( len, .001 ) ).toVar();
+	const slot = select( cacheSlot.lessThan( 0 ), int( - 1 ), add( 4, cacheSlot.mul( 6 ) ).add( baseCubeFace( d.negate() ) ) ).toVar();
+
+	return color.rgb.mul( color.a ).mul( fall ).mul( fall ).mul( add( .18, mul( .82, max( dot( n, direction ), 0. ) ) ) ).mul( baseLocalVisibility( p.add( n.mul( .012 ) ), direction, len.sub( .10 ), slot ) );
+
+}, { p: 'vec3', n: 'vec3', emitter: 'vec3', color: 'vec4', cacheSlot: 'int', return: 'vec3' } );
+
 const baseLighting = /*@__PURE__*/ Fn( ( [ p, n ] ) => {
 
 	const light = vec3( 0. ).toVar();
 
-	Loop( 4, ( { i } ) => {
+	If( baseLightCount.equal( 0 ), () => {
 
-		If( i.greaterThanEqual( baseLightCount ), () => {
+		return light;
 
-			Break();
+	} );
+
+	If( baseLightCount.lessThanEqual( 4 ), () => {
+
+		Loop( 4, ( { i } ) => {
+
+			If( i.greaterThanEqual( baseLightCount ), () => {
+
+				Break();
+
+			} );
+
+			light.addAssign( oneBaseLight( p, n, baseLights.element( i ).xyz, baseColors.element( i ), i ) );
 
 		} );
 
-		const d = baseLights.element( i ).xyz.sub( p ).toVar();
-		const squared = dot( d, d ).toVar();
-		const range = baseLights.element( i ).w.toVar();
+		return light;
 
-		If( squared.greaterThanEqual( range.mul( range ) ), () => {
+	} );
+
+	const cell = floor( p.xz.add( 640. ).div( 8. ) ).toVar();
+
+	If( min( cell.x, cell.y ).lessThan( 0. ).or( max( cell.x, cell.y ).greaterThanEqual( 160. ) ), () => {
+
+		return light;
+
+	} );
+
+	const list = baseLightGrid.sample( cell.add( .5 ).div( 160. ) ).rg.toVar();
+	const count = int( list.y ).toVar();
+
+	Loop( { start: 0, end: count, name: 'j' }, ( { j } ) => {
+
+		const index = readBaseLight( list.x.add( float( j ) ) ).x.toVar();
+		const emitter = readBaseLight( index.mul( 2. ) ).toVar();
+		const delta = emitter.xyz.sub( p ).toVar();
+
+		If( dot( delta, delta ).greaterThanEqual( 144. ), () => {
 
 			Continue();
 
 		} );
 
-		const len = sqrt( squared ).toVar();
-		const fall = sub( 1., len.div( range ) ).toVar();
-		const direction = d.div( max( len, .001 ) ).toVar();
-
-		If( fall.greaterThan( .001 ), () => {
-
-			light.addAssign( baseColors.element( i ).rgb.mul( baseColors.element( i ).a ).mul( fall ).mul( fall ).mul( add( .18, mul( .82, max( dot( n, direction ), 0. ) ) ) ).mul( baseLocalVisibility( p.add( n.mul( .012 ) ), direction, len.sub( .10 ), add( 4, i.mul( 6 ) ).add( baseCubeFace( d.negate() ) ) ) ) );
-
-		} );
+		light.addAssign( oneBaseLight( p, n, emitter.xyz, readBaseLight( index.mul( 2. ).add( 1. ) ), int( emitter.w ) ) );
 
 	} );
 
@@ -2486,7 +2663,7 @@ return skyFragment(vWorld,vNormal,vPaint,vEmission,skyPixel,skyPointUV);})();
 return {vertex,fragment};
 }
 // 7: moon Points
-export function material_30243dd9(bind){
+export function material_fb142299(bind){
 const position=attribute('position','vec3'),normal=attribute('normal','vec3'),uv=attribute('uv','vec2');
 const projectionMatrix=cameraProjectionMatrix,viewMatrix=cameraViewMatrix,modelMatrix=modelWorldMatrix,modelViewMatrix=modelViewMatrixNode;
 const skyViewport=viewportSize,quadCorner=attribute('quadCorner','vec2'),skyPointUV=vec2(uv.x,uv.y.oneMinus()),skyPixel=vec3(screenCoordinate.x,viewportSize.y.sub(screenCoordinate.y),0);
@@ -2509,7 +2686,7 @@ const skyVertex = /*@__PURE__*/ Fn( () => {
 	const skyPointSize = float( 1. ).toVar();
 	const v = mat3( viewMatrix ).mul( position ).toVar();
 	const p = projectionMatrix.mul( vec4( v, 1. ) ).toVar();
-	skyPosition.assign( select( p.w.greaterThan( 0. ), vec4( p.xy, p.w.mul( .99998 ), p.w ), vec4( 2., 2., 2., 1. ) ) );
+	skyPosition.assign( select( p.w.greaterThan( 0. ), vec4( p.xy, p.w, p.w ), vec4( 2., 2., 2., 1. ) ) );
 	vIndex.assign( planetIndex );
 	const naked = select( planetIndex.lessThan( 2. ), 4.2, select( planetIndex.lessThan( 5. ), 3.3, 2.0 ) ).toVar();
 	skyPointSize.assign( mix( naked, select( planetIndex.equal( 4. ), 56., 34. ), resolved ).mul( pixelRatio ) );
@@ -2598,7 +2775,57 @@ return skyFragment(vIndex,skyPixel,skyPointUV);})();
 })();
 return {vertex,fragment};
 }
-// 8: moon shadow atlas
+// 8: moon Mesh
+export function material_9cc412d2(bind){
+const position=attribute('position','vec3'),normal=attribute('normal','vec3'),uv=attribute('uv','vec2');
+const projectionMatrix=cameraProjectionMatrix,viewMatrix=cameraViewMatrix,modelMatrix=modelWorldMatrix,modelViewMatrix=modelViewMatrixNode;
+const skyViewport=viewportSize,quadCorner=attribute('quadCorner','vec2'),skyPointUV=vec2(0),skyPixel=vec3(screenCoordinate.x,viewportSize.y.sub(screenCoordinate.y),0);
+const s=varying(float(),"sky_s");
+const d=varying(float(),"sky_d");
+const beamSide=attribute("beamSide","float");
+const beamDistance=attribute("beamDistance","float");
+const vertex=Fn(()=>{
+
+return (()=>{// Three.js Transpiler r186
+
+
+
+const skyVertex = /*@__PURE__*/ Fn( () => {
+
+	const skyPosition = vec4( 0. ).toVar();
+	const skyPointSize = float( 1. ).toVar();
+	s.assign( beamSide );
+	d.assign( beamDistance );
+	skyPosition.assign( projectionMatrix.mul( viewMatrix ).mul( vec4( position, 1. ) ) );
+
+	return skyPosition;
+
+} );
+
+return skyVertex();})();
+})();
+const fragment=Fn(()=>{
+
+return (()=>{// Three.js Transpiler r186
+
+
+
+const skyFragment = /*@__PURE__*/ Fn( ( [ s, d, skyPixel, skyPointUV ] ) => {
+
+	const skyColor = vec4( 0. ).toVar();
+	const edge = pow( max( 0., sub( 1., abs( s ) ) ), 1.7 ).toVar();
+	const fade = sub( 1., smoothstep( 8., 55., d ) ).toVar();
+	skyColor.assign( vec4( .25, 1., .65, edge.mul( fade ).mul( .58 ) ) );
+
+	return skyColor;
+
+}, { s: 'float', d: 'float', skyPixel: 'vec3', skyPointUV: 'vec2', return: 'vec4' } );
+
+return skyFragment(s,d,skyPixel,skyPointUV);})();
+})();
+return {vertex,fragment};
+}
+// 9: moon shadow atlas
 export function material_82498b0f(bind){
 const position=attribute('position','vec3'),normal=attribute('normal','vec3'),uv=attribute('uv','vec2');
 const projectionMatrix=cameraProjectionMatrix,viewMatrix=cameraViewMatrix,modelMatrix=modelWorldMatrix,modelViewMatrix=modelViewMatrixNode;
@@ -2654,7 +2881,7 @@ return skyFragment(casterWorld,skyPixel,skyPointUV);})();
 })();
 return {vertex,fragment};
 }
-// 9: moon atlas clear
+// 10: moon atlas clear
 export function material_c56b0306(bind){
 const position=attribute('position','vec3'),normal=attribute('normal','vec3'),uv=attribute('uv','vec2');
 const projectionMatrix=cameraProjectionMatrix,viewMatrix=cameraViewMatrix,modelMatrix=modelWorldMatrix,modelViewMatrix=modelViewMatrixNode;
@@ -2697,8 +2924,8 @@ return skyFragment(skyPixel,skyPointUV);})();
 })();
 return {vertex,fragment};
 }
-// 10: moon ghost
-export function material_e117bc71(bind){
+// 11: moon ghost
+export function material_fa8df9b1(bind){
 const position=attribute('position','vec3'),normal=attribute('normal','vec3'),uv=attribute('uv','vec2');
 const projectionMatrix=cameraProjectionMatrix,viewMatrix=cameraViewMatrix,modelMatrix=modelWorldMatrix,modelViewMatrix=modelViewMatrixNode;
 const skyViewport=viewportSize,quadCorner=attribute('quadCorner','vec2'),skyPointUV=vec2(0),skyPixel=vec3(screenCoordinate.x,viewportSize.y.sub(screenCoordinate.y),0);
@@ -2734,6 +2961,9 @@ const baseLightCount=bind("baseLightCount","int",0);
 const baseNodeCount=bind("baseNodeCount","int",0);
 const baseTree=bind("baseTree","sampler2D",0);
 const baseTreeSize=bind("baseTreeSize","vec2",0);
+const baseLightGrid=bind("baseLightGrid","sampler2D",0);
+const baseLightData=bind("baseLightData","sampler2D",0);
+const baseLightDataSize=bind("baseLightDataSize","vec2",0);
 const baseShadowAtlas=bind("baseShadowAtlas","sampler2D",0);
 const baseShadowReady=bind("baseShadowReady","float",0);
 const baseShadowMatrices=bind("baseShadowMatrices","mat4",32);
@@ -2801,6 +3031,9 @@ baseLightCount.toStack();
 baseNodeCount.toStack();
 baseTree.sample( vec2(0) ).toStack();
 baseTreeSize.toStack();
+baseLightGrid.sample( vec2(0) ).toStack();
+baseLightData.sample( vec2(0) ).toStack();
+baseLightDataSize.toStack();
 baseShadowAtlas.sample( vec2(0) ).toStack();
 baseShadowReady.toStack();
 baseShadowMatrices.element(0).toStack();
@@ -3198,6 +3431,12 @@ const baseCubeFace = /*@__PURE__*/ Fn( ( [ p ] ) => {
 
 const baseLocalVisibility = /*@__PURE__*/ Fn( ( [ p, dir, limit, slot ] ) => {
 
+	If( slot.lessThan( 0 ), () => {
+
+		return baseVisibility( p, dir, limit );
+
+	} );
+
 	const visibility = shadowAtSlot( p, dir, limit, slot ).toVar();
 
 	If( visibility.lessThan( 0. ), () => {
@@ -3219,37 +3458,84 @@ const basePointVisibility = /*@__PURE__*/ Fn( ( [ p, normal, emitter, slot ] ) =
 
 }, { p: 'vec3', normal: 'vec3', emitter: 'vec3', slot: 'int', return: 'float' } );
 
+const readBaseLight = /*@__PURE__*/ Fn( ( [ index ] ) => {
+
+	return baseLightData.sample( vec2( mod( index, baseLightDataSize.x ), floor( index.div( baseLightDataSize.x ) ) ).add( .5 ).div( baseLightDataSize ) );
+
+}, { index: 'float', return: 'vec4' } );
+
+const oneBaseLight = /*@__PURE__*/ Fn( ( [ p, n, emitter, color, cacheSlot ] ) => {
+
+	const d = emitter.sub( p ).toVar();
+	const squared = dot( d, d ).toVar();
+
+	If( squared.greaterThanEqual( 144. ), () => {
+
+		return vec3( 0. );
+
+	} );
+
+	const len = sqrt( squared ).toVar();
+	const fall = sub( 1., len.div( 12. ) ).toVar();
+	const direction = d.div( max( len, .001 ) ).toVar();
+	const slot = select( cacheSlot.lessThan( 0 ), int( - 1 ), add( 4, cacheSlot.mul( 6 ) ).add( baseCubeFace( d.negate() ) ) ).toVar();
+
+	return color.rgb.mul( color.a ).mul( fall ).mul( fall ).mul( add( .18, mul( .82, max( dot( n, direction ), 0. ) ) ) ).mul( baseLocalVisibility( p.add( n.mul( .012 ) ), direction, len.sub( .10 ), slot ) );
+
+}, { p: 'vec3', n: 'vec3', emitter: 'vec3', color: 'vec4', cacheSlot: 'int', return: 'vec3' } );
+
 const baseLighting = /*@__PURE__*/ Fn( ( [ p, n ] ) => {
 
 	const light = vec3( 0. ).toVar();
 
-	Loop( 4, ( { i } ) => {
+	If( baseLightCount.equal( 0 ), () => {
 
-		If( i.greaterThanEqual( baseLightCount ), () => {
+		return light;
 
-			Break();
+	} );
+
+	If( baseLightCount.lessThanEqual( 4 ), () => {
+
+		Loop( 4, ( { i } ) => {
+
+			If( i.greaterThanEqual( baseLightCount ), () => {
+
+				Break();
+
+			} );
+
+			light.addAssign( oneBaseLight( p, n, baseLights.element( i ).xyz, baseColors.element( i ), i ) );
 
 		} );
 
-		const d = baseLights.element( i ).xyz.sub( p ).toVar();
-		const squared = dot( d, d ).toVar();
-		const range = baseLights.element( i ).w.toVar();
+		return light;
 
-		If( squared.greaterThanEqual( range.mul( range ) ), () => {
+	} );
+
+	const cell = floor( p.xz.add( 640. ).div( 8. ) ).toVar();
+
+	If( min( cell.x, cell.y ).lessThan( 0. ).or( max( cell.x, cell.y ).greaterThanEqual( 160. ) ), () => {
+
+		return light;
+
+	} );
+
+	const list = baseLightGrid.sample( cell.add( .5 ).div( 160. ) ).rg.toVar();
+	const count = int( list.y ).toVar();
+
+	Loop( { start: 0, end: count, name: 'j' }, ( { j } ) => {
+
+		const index = readBaseLight( list.x.add( float( j ) ) ).x.toVar();
+		const emitter = readBaseLight( index.mul( 2. ) ).toVar();
+		const delta = emitter.xyz.sub( p ).toVar();
+
+		If( dot( delta, delta ).greaterThanEqual( 144. ), () => {
 
 			Continue();
 
 		} );
 
-		const len = sqrt( squared ).toVar();
-		const fall = sub( 1., len.div( range ) ).toVar();
-		const direction = d.div( max( len, .001 ) ).toVar();
-
-		If( fall.greaterThan( .001 ), () => {
-
-			light.addAssign( baseColors.element( i ).rgb.mul( baseColors.element( i ).a ).mul( fall ).mul( fall ).mul( add( .18, mul( .82, max( dot( n, direction ), 0. ) ) ) ).mul( baseLocalVisibility( p.add( n.mul( .012 ) ), direction, len.sub( .10 ), add( 4, i.mul( 6 ) ).add( baseCubeFace( d.negate() ) ) ) ) );
-
-		} );
+		light.addAssign( oneBaseLight( p, n, emitter.xyz, readBaseLight( index.mul( 2. ).add( 1. ) ), int( emitter.w ) ) );
 
 	} );
 
@@ -3361,8 +3647,8 @@ return skyFragment(vWorld,vNormal,vPaint,vEmission,skyPixel,skyPointUV);})();
 })();
 return {vertex,fragment};
 }
-// 11: moon batched props
-export function material_d4f99339(bind){
+// 12: moon batched props
+export function material_33aeca19(bind){
 const position=attribute('position','vec3'),normal=attribute('normal','vec3'),uv=attribute('uv','vec2');
 const projectionMatrix=cameraProjectionMatrix,viewMatrix=cameraViewMatrix,modelMatrix=modelWorldMatrix,modelViewMatrix=modelViewMatrixNode;
 const skyViewport=viewportSize,quadCorner=attribute('quadCorner','vec2'),skyPointUV=vec2(0),skyPixel=vec3(screenCoordinate.x,viewportSize.y.sub(screenCoordinate.y),0);
@@ -3398,6 +3684,9 @@ const baseLightCount=bind("baseLightCount","int",0);
 const baseNodeCount=bind("baseNodeCount","int",0);
 const baseTree=bind("baseTree","sampler2D",0);
 const baseTreeSize=bind("baseTreeSize","vec2",0);
+const baseLightGrid=bind("baseLightGrid","sampler2D",0);
+const baseLightData=bind("baseLightData","sampler2D",0);
+const baseLightDataSize=bind("baseLightDataSize","vec2",0);
 const baseShadowAtlas=bind("baseShadowAtlas","sampler2D",0);
 const baseShadowReady=bind("baseShadowReady","float",0);
 const baseShadowMatrices=bind("baseShadowMatrices","mat4",32);
@@ -3469,6 +3758,9 @@ baseLightCount.toStack();
 baseNodeCount.toStack();
 baseTree.sample( vec2(0) ).toStack();
 baseTreeSize.toStack();
+baseLightGrid.sample( vec2(0) ).toStack();
+baseLightData.sample( vec2(0) ).toStack();
+baseLightDataSize.toStack();
 baseShadowAtlas.sample( vec2(0) ).toStack();
 baseShadowReady.toStack();
 baseShadowMatrices.element(0).toStack();
@@ -3866,6 +4158,12 @@ const baseCubeFace = /*@__PURE__*/ Fn( ( [ p ] ) => {
 
 const baseLocalVisibility = /*@__PURE__*/ Fn( ( [ p, dir, limit, slot ] ) => {
 
+	If( slot.lessThan( 0 ), () => {
+
+		return baseVisibility( p, dir, limit );
+
+	} );
+
 	const visibility = shadowAtSlot( p, dir, limit, slot ).toVar();
 
 	If( visibility.lessThan( 0. ), () => {
@@ -3887,37 +4185,84 @@ const basePointVisibility = /*@__PURE__*/ Fn( ( [ p, normal, emitter, slot ] ) =
 
 }, { p: 'vec3', normal: 'vec3', emitter: 'vec3', slot: 'int', return: 'float' } );
 
+const readBaseLight = /*@__PURE__*/ Fn( ( [ index ] ) => {
+
+	return baseLightData.sample( vec2( mod( index, baseLightDataSize.x ), floor( index.div( baseLightDataSize.x ) ) ).add( .5 ).div( baseLightDataSize ) );
+
+}, { index: 'float', return: 'vec4' } );
+
+const oneBaseLight = /*@__PURE__*/ Fn( ( [ p, n, emitter, color, cacheSlot ] ) => {
+
+	const d = emitter.sub( p ).toVar();
+	const squared = dot( d, d ).toVar();
+
+	If( squared.greaterThanEqual( 144. ), () => {
+
+		return vec3( 0. );
+
+	} );
+
+	const len = sqrt( squared ).toVar();
+	const fall = sub( 1., len.div( 12. ) ).toVar();
+	const direction = d.div( max( len, .001 ) ).toVar();
+	const slot = select( cacheSlot.lessThan( 0 ), int( - 1 ), add( 4, cacheSlot.mul( 6 ) ).add( baseCubeFace( d.negate() ) ) ).toVar();
+
+	return color.rgb.mul( color.a ).mul( fall ).mul( fall ).mul( add( .18, mul( .82, max( dot( n, direction ), 0. ) ) ) ).mul( baseLocalVisibility( p.add( n.mul( .012 ) ), direction, len.sub( .10 ), slot ) );
+
+}, { p: 'vec3', n: 'vec3', emitter: 'vec3', color: 'vec4', cacheSlot: 'int', return: 'vec3' } );
+
 const baseLighting = /*@__PURE__*/ Fn( ( [ p, n ] ) => {
 
 	const light = vec3( 0. ).toVar();
 
-	Loop( 4, ( { i } ) => {
+	If( baseLightCount.equal( 0 ), () => {
 
-		If( i.greaterThanEqual( baseLightCount ), () => {
+		return light;
 
-			Break();
+	} );
+
+	If( baseLightCount.lessThanEqual( 4 ), () => {
+
+		Loop( 4, ( { i } ) => {
+
+			If( i.greaterThanEqual( baseLightCount ), () => {
+
+				Break();
+
+			} );
+
+			light.addAssign( oneBaseLight( p, n, baseLights.element( i ).xyz, baseColors.element( i ), i ) );
 
 		} );
 
-		const d = baseLights.element( i ).xyz.sub( p ).toVar();
-		const squared = dot( d, d ).toVar();
-		const range = baseLights.element( i ).w.toVar();
+		return light;
 
-		If( squared.greaterThanEqual( range.mul( range ) ), () => {
+	} );
+
+	const cell = floor( p.xz.add( 640. ).div( 8. ) ).toVar();
+
+	If( min( cell.x, cell.y ).lessThan( 0. ).or( max( cell.x, cell.y ).greaterThanEqual( 160. ) ), () => {
+
+		return light;
+
+	} );
+
+	const list = baseLightGrid.sample( cell.add( .5 ).div( 160. ) ).rg.toVar();
+	const count = int( list.y ).toVar();
+
+	Loop( { start: 0, end: count, name: 'j' }, ( { j } ) => {
+
+		const index = readBaseLight( list.x.add( float( j ) ) ).x.toVar();
+		const emitter = readBaseLight( index.mul( 2. ) ).toVar();
+		const delta = emitter.xyz.sub( p ).toVar();
+
+		If( dot( delta, delta ).greaterThanEqual( 144. ), () => {
 
 			Continue();
 
 		} );
 
-		const len = sqrt( squared ).toVar();
-		const fall = sub( 1., len.div( range ) ).toVar();
-		const direction = d.div( max( len, .001 ) ).toVar();
-
-		If( fall.greaterThan( .001 ), () => {
-
-			light.addAssign( baseColors.element( i ).rgb.mul( baseColors.element( i ).a ).mul( fall ).mul( fall ).mul( add( .18, mul( .82, max( dot( n, direction ), 0. ) ) ) ).mul( baseLocalVisibility( p.add( n.mul( .012 ) ), direction, len.sub( .10 ), add( 4, i.mul( 6 ) ).add( baseCubeFace( d.negate() ) ) ) ) );
-
-		} );
+		light.addAssign( oneBaseLight( p, n, emitter.xyz, readBaseLight( index.mul( 2. ).add( 1. ) ), int( emitter.w ) ) );
 
 	} );
 
@@ -4029,7 +4374,7 @@ return skyFragment(vWorld,vNormal,vPaint,vEmission,skyPixel,skyPointUV);})();
 })();
 return {vertex,fragment};
 }
-// 12: moon Mesh
+// 13: moon Mesh
 export function material_2071ba81(bind){
 const position=attribute('position','vec3'),normal=attribute('normal','vec3'),uv=attribute('uv','vec2');
 const projectionMatrix=cameraProjectionMatrix,viewMatrix=cameraViewMatrix,modelMatrix=modelWorldMatrix,modelViewMatrix=modelViewMatrixNode;
@@ -4094,7 +4439,7 @@ return skyFragment(vRay,skyPixel,skyPointUV);})();
 })();
 return {vertex,fragment};
 }
-// 13: moon Mesh
+// 14: moon Mesh
 export function material_3b1f22dc(bind){
 const position=attribute('position','vec3'),normal=attribute('normal','vec3'),uv=attribute('uv','vec2');
 const projectionMatrix=cameraProjectionMatrix,viewMatrix=cameraViewMatrix,modelMatrix=modelWorldMatrix,modelViewMatrix=modelViewMatrixNode;
@@ -4216,8 +4561,8 @@ return skyFragment(vRay,skyPixel,skyPointUV);})();
 })();
 return {vertex,fragment};
 }
-// 14: moon Points
-export function material_8841ef08(bind){
+// 15: moon Points
+export function material_c958ec57(bind){
 const position=attribute('position','vec3'),normal=attribute('normal','vec3'),uv=attribute('uv','vec2');
 const projectionMatrix=cameraProjectionMatrix,viewMatrix=cameraViewMatrix,modelMatrix=modelWorldMatrix,modelViewMatrix=modelViewMatrixNode;
 const skyViewport=viewportSize,quadCorner=attribute('quadCorner','vec2'),skyPointUV=vec2(uv.x,uv.y.oneMinus()),skyPixel=vec3(screenCoordinate.x,viewportSize.y.sub(screenCoordinate.y),0);
@@ -4252,7 +4597,7 @@ const skyVertex = /*@__PURE__*/ Fn( () => {
 	const dir = mat3( field ).mul( position ).toVar();
 	const vd = mat3( viewMatrix ).mul( dir ).toVar();
 	const p = projectionMatrix.mul( vec4( vd, 1. ) ).toVar();
-	skyPosition.assign( select( p.w.greaterThan( 0. ), vec4( p.xy, p.w.mul( .99999 ), p.w ), vec4( 2., 2., 2., 1. ) ) );
+	skyPosition.assign( select( p.w.greaterThan( 0. ), vec4( p.xy, p.w, p.w ), vec4( 2., 2., 2., 1. ) ) );
 	const visible = sub( 1., smoothstep( starLimit.sub( .5 ), starLimit.add( .22 ), magnitude ) ).toVar();
 
 	If( visible.mul( night ).lessThan( .0001 ).or( p.w.lessThanEqual( 0. ) ), () => {
@@ -4304,7 +4649,7 @@ return skyFragment(vColor,vAlpha,skyPixel,skyPointUV);})();
 })();
 return {vertex,fragment};
 }
-// 15: moon Mesh
+// 16: moon Mesh
 export function material_f4599137(bind){
 const position=attribute('position','vec3'),normal=attribute('normal','vec3'),uv=attribute('uv','vec2');
 const projectionMatrix=cameraProjectionMatrix,viewMatrix=cameraViewMatrix,modelMatrix=modelWorldMatrix,modelViewMatrix=modelViewMatrixNode;
@@ -4391,8 +4736,8 @@ return skyFragment(vRay,skyPixel,skyPointUV);})();
 })();
 return {vertex,fragment};
 }
-// 16: moon Mesh
-export function material_66e32ed5(bind){
+// 17: moon Mesh
+export function material_c44d9ce3(bind){
 const position=attribute('position','vec3'),normal=attribute('normal','vec3'),uv=attribute('uv','vec2');
 const projectionMatrix=cameraProjectionMatrix,viewMatrix=cameraViewMatrix,modelMatrix=modelWorldMatrix,modelViewMatrix=modelViewMatrixNode;
 const skyViewport=viewportSize,quadCorner=attribute('quadCorner','vec2'),skyPointUV=vec2(0),skyPixel=vec3(screenCoordinate.x,viewportSize.y.sub(screenCoordinate.y),0);
@@ -4424,6 +4769,9 @@ const baseLightCount=bind("baseLightCount","int",0);
 const baseNodeCount=bind("baseNodeCount","int",0);
 const baseTree=bind("baseTree","sampler2D",0);
 const baseTreeSize=bind("baseTreeSize","vec2",0);
+const baseLightGrid=bind("baseLightGrid","sampler2D",0);
+const baseLightData=bind("baseLightData","sampler2D",0);
+const baseLightDataSize=bind("baseLightDataSize","vec2",0);
 const baseShadowAtlas=bind("baseShadowAtlas","sampler2D",0);
 const baseShadowReady=bind("baseShadowReady","float",0);
 const baseShadowMatrices=bind("baseShadowMatrices","mat4",32);
@@ -4486,6 +4834,9 @@ baseLightCount.toStack();
 baseNodeCount.toStack();
 baseTree.sample( vec2(0) ).toStack();
 baseTreeSize.toStack();
+baseLightGrid.sample( vec2(0) ).toStack();
+baseLightData.sample( vec2(0) ).toStack();
+baseLightDataSize.toStack();
 baseShadowAtlas.sample( vec2(0) ).toStack();
 baseShadowReady.toStack();
 baseShadowMatrices.element(0).toStack();
@@ -4888,6 +5239,12 @@ const baseCubeFace = /*@__PURE__*/ Fn( ( [ p ] ) => {
 
 const baseLocalVisibility = /*@__PURE__*/ Fn( ( [ p, dir, limit, slot ] ) => {
 
+	If( slot.lessThan( 0 ), () => {
+
+		return baseVisibility( p, dir, limit );
+
+	} );
+
 	const visibility = shadowAtSlot( p, dir, limit, slot ).toVar();
 
 	If( visibility.lessThan( 0. ), () => {
@@ -4909,37 +5266,84 @@ const basePointVisibility = /*@__PURE__*/ Fn( ( [ p, normal, emitter, slot ] ) =
 
 }, { p: 'vec3', normal: 'vec3', emitter: 'vec3', slot: 'int', return: 'float' } );
 
+const readBaseLight = /*@__PURE__*/ Fn( ( [ index ] ) => {
+
+	return baseLightData.sample( vec2( mod( index, baseLightDataSize.x ), floor( index.div( baseLightDataSize.x ) ) ).add( .5 ).div( baseLightDataSize ) );
+
+}, { index: 'float', return: 'vec4' } );
+
+const oneBaseLight = /*@__PURE__*/ Fn( ( [ p, n, emitter, color, cacheSlot ] ) => {
+
+	const d = emitter.sub( p ).toVar();
+	const squared = dot( d, d ).toVar();
+
+	If( squared.greaterThanEqual( 144. ), () => {
+
+		return vec3( 0. );
+
+	} );
+
+	const len = sqrt( squared ).toVar();
+	const fall = sub( 1., len.div( 12. ) ).toVar();
+	const direction = d.div( max( len, .001 ) ).toVar();
+	const slot = select( cacheSlot.lessThan( 0 ), int( - 1 ), add( 4, cacheSlot.mul( 6 ) ).add( baseCubeFace( d.negate() ) ) ).toVar();
+
+	return color.rgb.mul( color.a ).mul( fall ).mul( fall ).mul( add( .18, mul( .82, max( dot( n, direction ), 0. ) ) ) ).mul( baseLocalVisibility( p.add( n.mul( .012 ) ), direction, len.sub( .10 ), slot ) );
+
+}, { p: 'vec3', n: 'vec3', emitter: 'vec3', color: 'vec4', cacheSlot: 'int', return: 'vec3' } );
+
 const baseLighting = /*@__PURE__*/ Fn( ( [ p, n ] ) => {
 
 	const light = vec3( 0. ).toVar();
 
-	Loop( 4, ( { i } ) => {
+	If( baseLightCount.equal( 0 ), () => {
 
-		If( i.greaterThanEqual( baseLightCount ), () => {
+		return light;
 
-			Break();
+	} );
+
+	If( baseLightCount.lessThanEqual( 4 ), () => {
+
+		Loop( 4, ( { i } ) => {
+
+			If( i.greaterThanEqual( baseLightCount ), () => {
+
+				Break();
+
+			} );
+
+			light.addAssign( oneBaseLight( p, n, baseLights.element( i ).xyz, baseColors.element( i ), i ) );
 
 		} );
 
-		const d = baseLights.element( i ).xyz.sub( p ).toVar();
-		const squared = dot( d, d ).toVar();
-		const range = baseLights.element( i ).w.toVar();
+		return light;
 
-		If( squared.greaterThanEqual( range.mul( range ) ), () => {
+	} );
+
+	const cell = floor( p.xz.add( 640. ).div( 8. ) ).toVar();
+
+	If( min( cell.x, cell.y ).lessThan( 0. ).or( max( cell.x, cell.y ).greaterThanEqual( 160. ) ), () => {
+
+		return light;
+
+	} );
+
+	const list = baseLightGrid.sample( cell.add( .5 ).div( 160. ) ).rg.toVar();
+	const count = int( list.y ).toVar();
+
+	Loop( { start: 0, end: count, name: 'j' }, ( { j } ) => {
+
+		const index = readBaseLight( list.x.add( float( j ) ) ).x.toVar();
+		const emitter = readBaseLight( index.mul( 2. ) ).toVar();
+		const delta = emitter.xyz.sub( p ).toVar();
+
+		If( dot( delta, delta ).greaterThanEqual( 144. ), () => {
 
 			Continue();
 
 		} );
 
-		const len = sqrt( squared ).toVar();
-		const fall = sub( 1., len.div( range ) ).toVar();
-		const direction = d.div( max( len, .001 ) ).toVar();
-
-		If( fall.greaterThan( .001 ), () => {
-
-			light.addAssign( baseColors.element( i ).rgb.mul( baseColors.element( i ).a ).mul( fall ).mul( fall ).mul( add( .18, mul( .82, max( dot( n, direction ), 0. ) ) ) ).mul( baseLocalVisibility( p.add( n.mul( .012 ) ), direction, len.sub( .10 ), add( 4, i.mul( 6 ) ).add( baseCubeFace( d.negate() ) ) ) ) );
-
-		} );
+		light.addAssign( oneBaseLight( p, n, emitter.xyz, readBaseLight( index.mul( 2. ).add( 1. ) ), int( emitter.w ) ) );
 
 	} );
 
@@ -5190,56 +5594,6 @@ return skyFragment(vWorld,vNormal,skyPixel,skyPointUV);})();
 })();
 return {vertex,fragment};
 }
-// 17: moon Mesh
-export function material_9cc412d2(bind){
-const position=attribute('position','vec3'),normal=attribute('normal','vec3'),uv=attribute('uv','vec2');
-const projectionMatrix=cameraProjectionMatrix,viewMatrix=cameraViewMatrix,modelMatrix=modelWorldMatrix,modelViewMatrix=modelViewMatrixNode;
-const skyViewport=viewportSize,quadCorner=attribute('quadCorner','vec2'),skyPointUV=vec2(0),skyPixel=vec3(screenCoordinate.x,viewportSize.y.sub(screenCoordinate.y),0);
-const s=varying(float(),"sky_s");
-const d=varying(float(),"sky_d");
-const beamSide=attribute("beamSide","float");
-const beamDistance=attribute("beamDistance","float");
-const vertex=Fn(()=>{
-
-return (()=>{// Three.js Transpiler r186
-
-
-
-const skyVertex = /*@__PURE__*/ Fn( () => {
-
-	const skyPosition = vec4( 0. ).toVar();
-	const skyPointSize = float( 1. ).toVar();
-	s.assign( beamSide );
-	d.assign( beamDistance );
-	skyPosition.assign( projectionMatrix.mul( viewMatrix ).mul( vec4( position, 1. ) ) );
-
-	return skyPosition;
-
-} );
-
-return skyVertex();})();
-})();
-const fragment=Fn(()=>{
-
-return (()=>{// Three.js Transpiler r186
-
-
-
-const skyFragment = /*@__PURE__*/ Fn( ( [ s, d, skyPixel, skyPointUV ] ) => {
-
-	const skyColor = vec4( 0. ).toVar();
-	const edge = pow( max( 0., sub( 1., abs( s ) ) ), 1.7 ).toVar();
-	const fade = sub( 1., smoothstep( 8., 55., d ) ).toVar();
-	skyColor.assign( vec4( .25, 1., .65, edge.mul( fade ).mul( .58 ) ) );
-
-	return skyColor;
-
-}, { s: 'float', d: 'float', skyPixel: 'vec3', skyPointUV: 'vec2', return: 'vec4' } );
-
-return skyFragment(s,d,skyPixel,skyPointUV);})();
-})();
-return {vertex,fragment};
-}
 // 18: moon terrain cache
 export function material_294d16e0(bind){
 const position=attribute('position','vec3'),normal=attribute('normal','vec3'),uv=attribute('uv','vec2');
@@ -5370,4 +5724,101 @@ return skyFragment(uvCache,skyPixel,skyPointUV);})();
 })();
 return {vertex,fragment};
 }
-export const materials={'52462404':material_52462404,'cf34c1a':material_cf34c1a,'c8c01696':material_c8c01696,'5f7f167':material_5f7f167,'b0d9a715':material_b0d9a715,'73036d1b':material_73036d1b,'b69705db':material_b69705db,'30243dd9':material_30243dd9,'82498b0f':material_82498b0f,'c56b0306':material_c56b0306,'e117bc71':material_e117bc71,'d4f99339':material_d4f99339,'2071ba81':material_2071ba81,'3b1f22dc':material_3b1f22dc,'8841ef08':material_8841ef08,'f4599137':material_f4599137,'66e32ed5':material_66e32ed5,'9cc412d2':material_9cc412d2,'294d16e0':material_294d16e0};
+// 19: landscape sky coverage
+export function material_b117a713(bind){
+const position=attribute('position','vec3'),normal=attribute('normal','vec3'),uv=attribute('uv','vec2');
+const projectionMatrix=cameraProjectionMatrix,viewMatrix=cameraViewMatrix,modelMatrix=modelWorldMatrix,modelViewMatrix=modelViewMatrixNode;
+const skyViewport=viewportSize,quadCorner=attribute('quadCorner','vec2'),skyPointUV=vec2(0),skyPixel=vec3(screenCoordinate.x,viewportSize.y.sub(screenCoordinate.y),0);
+const landscapeColor=bind("landscapeColor","sampler2D",0);
+const screenUV=varying(vec2(),"sky_screenUV");
+const vertex=Fn(()=>{
+
+return (()=>{// Three.js Transpiler r186
+
+
+
+const skyVertex = /*@__PURE__*/ Fn( () => {
+
+	const skyPosition = vec4( 0. ).toVar();
+	const skyPointSize = float( 1. ).toVar();
+	screenUV.assign( position.xy.mul( .5 ).add( .5 ) );
+	skyPosition.assign( vec4( position.xy, 0., 1. ) );
+
+	return skyPosition;
+
+} );
+
+return skyVertex();})();
+})();
+const fragment=Fn(()=>{
+landscapeColor.sample( vec2(0) ).toStack();
+return (()=>{// Three.js Transpiler r186
+
+
+
+const skyFragment = /*@__PURE__*/ Fn( ( [ screenUV, skyPixel, skyPointUV ] ) => {
+
+	const skyColor = vec4( 0. ).toVar();
+
+	If( landscapeColor.sample( screenUV.flipY() ).a.lessThan( .99999 ), () => {
+
+		Discard();
+
+	} );
+
+	skyColor.assign( vec4( 0. ) );
+
+	return skyColor;
+
+}, { screenUV: 'vec2', skyPixel: 'vec3', skyPointUV: 'vec2', return: 'vec4' } );
+
+return skyFragment(screenUV,skyPixel,skyPointUV);})();
+})();
+return {vertex,fragment};
+}
+// 20: landscape composite
+export function material_3114f17b(bind){
+const position=attribute('position','vec3'),normal=attribute('normal','vec3'),uv=attribute('uv','vec2');
+const projectionMatrix=cameraProjectionMatrix,viewMatrix=cameraViewMatrix,modelMatrix=modelWorldMatrix,modelViewMatrix=modelViewMatrixNode;
+const skyViewport=viewportSize,quadCorner=attribute('quadCorner','vec2'),skyPointUV=vec2(0),skyPixel=vec3(screenCoordinate.x,viewportSize.y.sub(screenCoordinate.y),0);
+const landscapeColor=bind("landscapeColor","sampler2D",0);
+const screenUV=varying(vec2(),"sky_screenUV");
+const vertex=Fn(()=>{
+
+return (()=>{// Three.js Transpiler r186
+
+
+
+const skyVertex = /*@__PURE__*/ Fn( () => {
+
+	const skyPosition = vec4( 0. ).toVar();
+	const skyPointSize = float( 1. ).toVar();
+	screenUV.assign( position.xy.mul( .5 ).add( .5 ) );
+	skyPosition.assign( vec4( position.xy, 0., 1. ) );
+
+	return skyPosition;
+
+} );
+
+return skyVertex();})();
+})();
+const fragment=Fn(()=>{
+landscapeColor.sample( vec2(0) ).toStack();
+return (()=>{// Three.js Transpiler r186
+
+
+
+const skyFragment = /*@__PURE__*/ Fn( ( [ screenUV, skyPixel, skyPointUV ] ) => {
+
+	const skyColor = vec4( 0. ).toVar();
+	skyColor.assign( landscapeColor.sample( screenUV.flipY() ) );
+
+	return skyColor;
+
+}, { screenUV: 'vec2', skyPixel: 'vec3', skyPointUV: 'vec2', return: 'vec4' } );
+
+return skyFragment(screenUV,skyPixel,skyPointUV);})();
+})();
+return {vertex,fragment};
+}
+export const materials={'52462404':material_52462404,'cf34c1a':material_cf34c1a,'f6d6f2f5':material_f6d6f2f5,'5f7f167':material_5f7f167,'54d1c0f':material_54d1c0f,'a2199d51':material_a2199d51,'fa8a7b69':material_fa8a7b69,'fb142299':material_fb142299,'9cc412d2':material_9cc412d2,'82498b0f':material_82498b0f,'c56b0306':material_c56b0306,'fa8df9b1':material_fa8df9b1,'33aeca19':material_33aeca19,'2071ba81':material_2071ba81,'3b1f22dc':material_3b1f22dc,'c958ec57':material_c958ec57,'f4599137':material_f4599137,'c44d9ce3':material_c44d9ce3,'294d16e0':material_294d16e0,'b117a713':material_b117a713,'3114f17b':material_3114f17b};

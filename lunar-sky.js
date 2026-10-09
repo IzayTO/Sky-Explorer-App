@@ -1,6 +1,6 @@
-import {createStarField} from './star-field.js?v=4.1.1';
+import {createStarField} from './star-field.js?v=4.1.2';
 import * as THREE from './three.module.js?v=4.0.0';
-import {clamp,smooth} from './sky.js?v=4.1.1';
+import {clamp,smooth} from './sky.js?v=4.1.2';
 const TAU=Math.PI*2,UP=new THREE.Vector3(0,1,0);
 export const LUNAR_DAY=29.53059,MOON_GRAVITY=1.62;
 const eq=(ra,de)=>new THREE.Vector3(Math.cos(de*Math.PI/180)*Math.cos(ra*Math.PI/180),Math.sin(de*Math.PI/180),Math.cos(de*Math.PI/180)*Math.sin(ra*Math.PI/180));
@@ -16,9 +16,9 @@ export class LunarSky{
   constructor(scene,base,earthTexture){
     this.sun=new THREE.Vector3();this.moon=new THREE.Vector3();this.field=new THREE.Matrix4();this.rotation=new THREE.Matrix4();this.tilt=new THREE.Matrix4().makeRotationX(-.9);
     this.forward=new THREE.Vector3();this.right=new THREE.Vector3();this.up=new THREE.Vector3();this.viewDirection=new THREE.Vector3();this.adaptation=0;this.solarGlare=0;this.lastTime=0;this.terrain=null;
-    this.u=THREE.UniformsUtils.clone(base.u);this.u.sunDirection.value=this.sun;this.u.moonDirection.value=this.moon;this.u.field.value=this.field;this.u.moonMap.value=earthTexture;
+    this.u=Object.fromEntries(Object.entries(base.u).map(([key,u])=>[key,{value:u.value?.isTexture?u.value:u.value?.clone?.()??u.value}]));this.u.sunDirection.value=this.sun;this.u.moonDirection.value=this.moon;this.u.field.value=this.field;this.u.moonMap.value=earthTexture;
     Object.assign(this.u,{earthLight:{value:new THREE.Vector3()},earthSpin:{value:0},solarVisible:{value:1},solarGlare:{value:0},adaptation:{value:0},earthIllumination:{value:.5}});
-    const copy=(original,fragment,additive=false)=>{const material=original.material.clone();material.uniforms=this.u;if(fragment)material.fragmentShader=fragment;material.blending=additive?THREE.AdditiveBlending:THREE.NormalBlending;const m=new THREE.Mesh(original.geometry,material);m.frustumCulled=false;m.renderOrder=original.renderOrder;scene.add(m);return m;};
+    const copy=(original,fragment,additive=false)=>{const material=original.material.clone();material.uniforms=this.u;if(fragment)material.fragmentShader=fragment;material.blending=additive?THREE.AdditiveBlending:THREE.NormalBlending;const m=new THREE.Mesh(original.geometry,material);m.layers.set(1);m.frustumCulled=false;m.renderOrder=original.renderOrder;scene.add(m);return m;};
       this.atmosphere=copy(base.atmosphere,`varying vec3 vRay;uniform vec3 sunDirection;uniform float solarVisible,solarGlare;
       void main(){vec3 d=normalize(vRay);float a=atan(length(cross(d,sunDirection)),dot(d,sunDirection));float aa=max(fwidth(a),.000018);
         float disk=1.-smoothstep(.0285-aa,.035+aa,a);
@@ -29,7 +29,7 @@ export class LunarSky{
     this.milkyWay=copy(base.milkyWay,mw,true);
     const mat=base.stars.material.clone();mat.uniforms=this.u;
     mat.vertexShader=`attribute float magnitude,seed;attribute vec3 starColor;uniform mat4 field;uniform vec3 moonDirection;uniform float night,starLimit,pixelRatio,zoomReveal,earthIllumination;varying vec3 vColor;varying float vAlpha;
-      void main(){vec3 dir=mat3(field)*position;vec3 vd=mat3(viewMatrix)*dir;vec4 p=projectionMatrix*vec4(vd,1.);gl_Position=p.w>0.?vec4(p.xy,p.w*.99999,p.w):vec4(2.,2.,2.,1.);
+      void main(){vec3 dir=mat3(field)*position;vec3 vd=mat3(viewMatrix)*dir;vec4 p=projectionMatrix*vec4(vd,1.);gl_Position=p.w>0.?vec4(p.xy,p.w,p.w):vec4(2.,2.,2.,1.);
         float visible=1.-smoothstep(starLimit-.5,starLimit+.22,magnitude);
         if(visible*night<.0001||p.w<=0.){gl_Position=vec4(2.,2.,2.,1.);gl_PointSize=1.;vAlpha=0.;vColor=vec3(0.);return;}
         float faint=smoothstep(4.8,8.,magnitude);
@@ -39,7 +39,7 @@ export class LunarSky{
         vAlpha=visible*strength*night*localGlare;vColor=starColor;}`;
     // Reuse the immutable GPU buffers; each world retains its own draw range.
     const starGeometry=new THREE.BufferGeometry();for(const [name,attribute] of Object.entries(base.stars.geometry.attributes)){if(!['quadCorner','uv'].includes(name))starGeometry.setAttribute(name,attribute);}
-    this.stars=createStarField(starGeometry,mat);this.stars.frustumCulled=false;this.stars.renderOrder=-9998;scene.add(this.stars);this.catalogCount=base.catalogCount;this.starCount=base.starCount;
+    this.stars=createStarField(starGeometry,mat);this.stars.layers.set(1);this.stars.frustumCulled=false;this.stars.renderOrder=10002;scene.add(this.stars);this.catalogCount=base.catalogCount;this.starCount=base.starCount;
     this.moonMesh=copy(base.moonMesh,`varying vec3 vRay;uniform vec3 moonDirection,earthLight;uniform sampler2D moonMap;uniform float earthSpin;
       void main(){vec3 d=normalize(vRay);float forward=dot(d,moonDirection);if(forward<.994)discard;
         vec3 right=normalize(cross(moonDirection,vec3(0.,1.,0.))),up=normalize(cross(right,moonDirection));

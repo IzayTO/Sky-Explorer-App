@@ -1,77 +1,43 @@
-SKY EXPLORER APP 4.1.1 — ALCANCE DE VERIFICACIÓN
+SKY EXPLORER APP 4.1.2 — VERIFICACIÓN Y LÍMITES
 
-FUENTE
-62 archivos de main verificados por hash Git; commit
-1271a4190fc78d77038fff4647c3a69aab15d49d. Copia independiente. Sin escritura en GitHub.
+REALIZADO EN EL ENTORNO LOCAL
+- Sintaxis de JavaScript, imports locales y correspondencia GLSL/TSL.
+- WebGPU con Three r186 y Dawn: shaders WGSL, pipelines y envío real de
+  comandos de ambos destinos, con instancing, sombras, composición, cambios
+  de calidad, recreación de atlas, resize y DPR 1,65. Adaptador de validación
+  “null”: valida la API, NO produce una imagen ni mide un iPhone.
+- Más de 11.000 escrituras de uniforms revisadas: ninguna con NaN tras
+  corregir el tipo Color. El bug anterior se reprodujo en el uploader de Three.
+- Renderizado GLSL con Mesa/llvmpipe: 66 muestras de iluminación de una base
+  de nueve lámparas coinciden con el cálculo de referencia completo antes
+  y después de alejar al jugador, incluyendo una pared que bloquea la luz.
+- Comparación de píxeles: dibujar cielo después de opacos conserva la imagen.
+  Composición de paisaje a media resolución + cielo a resolución completa:
+  puntos definidos, pared que oculta el cielo y fantasma translúcido correctos.
+- App real con dobles DOM/canvas/audio/renderer: entradas a Tierra/Luna,
+  seis cambios de destino conservando bases, historial y pose del vehículo;
+  una sola escena en environments y eventos dispose en geometrías liberadas.
+- 120 callbacks de pantalla por segundo producen 60 frames del juego.
+  Resolución interna 0,9 y cielo 1,65 coexisten.
+- Regresiones de inventario 30+10, catálogo táctil, construcción, cancelación
+  del fantasma, rotación, colisiones, pisos/techos/cimientos/rampas/barandales,
+  edición independiente de instancias, lámparas, láser, instrumentos, guía,
+  planetas, telescopio y controles de UI mediante pruebas de lógica.
+- Guardados v3.2 restauran/guardan/recargan con formatos y claves existentes.
+  Conservados objetos, dimensiones antiguas, ángulos, lámparas, objetos
+  tirados, mochila, cuaderno, fotografías y desbloqueos.
+- Perfiles y preferencias, presión sostenida y recuperación; el restablecimiento
+  solo toca preferencias gráficas. Se conserva el pasto configurable.
+- Caché: SHA-256 de TODOS los recursos, rutas bajo /Sky-Explorer-App/,
+  rechazo de publicación incompleta, carga offline, actualización aceptada
+  y separación de versiones por ventana en el simulador del Service Worker.
+- El ZIP, aplicado sobre la fuente publicada, reconstruye exactamente la
+  carpeta de producción preparada; no incluye carpetas internas.
 
-PRUEBAS DE LÓGICA CON APP.JS REAL Y DOBLES DE DOM/CANVAS/AUDIO/RENDERER
-Inicialización Tierra/Luna; inventario 30+10; catálogo; controles; órbitas;
-identificador Luna y siete planetas; láser; guía; lámpara rápida; telescopio;
-construcción modular, techos virtuales, pisos adyacentes; ejes/rotación libre;
-cancelación de fantasma frente a gesto de mirada; desplazamiento táctil de
-catálogo y pulsación para arrastrar; atajos; edición independiente y borrado;
-deshacer/rehacer; colisiones/soporte; lanzamiento y recuperación de objetos.
-
-CASOS NUEVOS
-• Base lunar nueva 8 × 8: dos módulos de pared por lado y cuatro techos de 4 m.
-• Rampas contiguas de 2 m, con/sin barandales, con colisión lateral efectiva.
-• Rampa de todo el ancho del cimiento; soporte, pendiente y borde de llegada.
-• Barandal continuo de extremo a extremo; colisión en el tramo entre postes;
-  rechazo de duplicados y apertura de marcos de 2,4 y 4 m.
-• Cimiento antiguo sin parámetros conserva 6 m; dimensiones explícitas no se
-  cambian. Rampa antigua baja conserva ausencia de barandal al cargar.
-• Lápiz/libro/mochila tienen un único padre de layout y mantienen sus acciones.
-• Lámparas con materiales/valores independientes de encendido y temperatura.
-• Diez vistas iniciales con dos fuentes celestes y una lámpara; cero redibujos
-  en reposo y movimiento pequeño de cámara; edición invalida correctamente;
-  liberación y recreación de atlas.
-
-REGRESIONES DE 4.1.0
-Perfiles, preferencias, histéresis y resolución manual; restablecimiento solo
-gráfico; ausencia de montañas en Tierra → Luna → Tierra; pasto apagado no
-se dibuja ni ejecuta culling; buffers se conservan; densidad/rango funcionales;
-instancing conserva picking/borrado/soporte; lámparas no reconstruyen BVH al
-encenderse; antena circular; sombra lunar bajo horizonte; detalle/cache lunar;
-contexto de telescopio y visibilidad del medidor FPS.
-Guardados reales del código 3.2 cargados, guardados y abiertos de nuevo en
-ambos mundos: bases, ángulos libres, lámparas, telescopio, stacks arrojados,
-40 casillas, selección, cuaderno/fotos y desbloqueos. Mismas claves.
-
-GRÁFICOS
-GLSL: 19 parejas reales compilan y enlazan mediante OpenGL/EGL Mesa llvmpipe.
-Prueba de píxeles: 2196 muestras de sombras del atlas sobre superficies
-expuestas coinciden con el BVH exacto; imagen interior 512² idéntica en ambas
-rutas de iluminación. Se conservan además 296 pruebas de sombras de cajas,
-ventanas, objetos rotados, paredes lejanas y parábola de antena.
-Props y vehículos lunares no reciben Sol directo desde debajo del horizonte.
-
-WebGPU: Three WebGPURenderer real y Dawn con adaptador null de VALIDACIÓN.
-19 variantes TSL/WGSL crean pipelines y envían comandos. Escenas completas
-Tierra/Luna en Calidad y Rendimiento, instancing, mapas de sombras, cache lunar,
-texturas reemplazadas, ayudantes de color/profundidad, atlas liberado/recreado
-y cambio de pixel ratio a 1,65. El adaptador null NO genera píxeles ni mide GPU.
-Factory: inicialización WebGPU asíncrona; shader no migrado rechazado; pérdida
-de dispositivo comunicada; fallback por ausencia/recuperación. El constructor
-WebGL se sustituye en ese test; no es una prueba física de contexto Safari.
-
-PWA Y PAQUETE
-Worker generado después de los archivos finales: lista completa, tamaños y
-SHA-256 de 60 recursos. Se verifican imports locales, versión, sintaxis JS,
-rutas HTML/manifest, shaders emparejados y ausencia de referencias inexistentes.
-Worker ejecutado en entorno simulado Cache/Fetch: subdirectorio Pages, arranque
-sin red, entrada Tierra/Luna, publicación parcial rechazada, actualización
-espera aceptación, ventanas fijadas a versiones completas y limpieza limitada
-a cachés propias. No se tocan localStorage ni IndexedDB.
-ZIP sin carpetas: al superponerlo a la fuente se reconstruyen exactamente
-los 63 archivos finales, byte por byte. No se incluyen pruebas ni node_modules.
-
-NO VERIFICADO FÍSICAMENTE
-No hay iPhone conectado. Pendientes: FPS sostenidos reales, temperatura,
-batería, memoria, render WebGPU/WebGL visible en Safari, multitouch real,
-safe areas/orientación y apariencia final del layout en pantalla.
-La agrupación DOM/CSS se comprobó en código; no se afirma haber probado
-visualmente el nuevo layout en un navegador físico de iPhone.
-Instalación Home Screen, posible desalojo de caché por iOS y actualización del
-GitHub Pages publicado deben comprobarse en el dispositivo. No se ha publicado
-nada para probarlo ni se garantiza una cifra de FPS o equivalencia universal
-por píxel entre drivers.
+PENDIENTE EN EL IPHONE FÍSICO
+La imagen final y comportamiento de Safari/WebKit instalado, pantalla y
+multitouch reales, enfriamiento/consumo tras 10–15 minutos, FPS sostenidos,
+latencia de compilación del controlador Apple y expulsión de caché por iOS.
+Tampoco se puede simular fielmente una pérdida real del dispositivo WebGPU
+Apple. El mecanismo existente de recuperación a WebGL se conserva.
+No se promete una cifra de FPS ni que el teléfono deje de calentarse.

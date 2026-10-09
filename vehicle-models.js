@@ -1,6 +1,6 @@
 import * as THREE from './three.module.js?v=4.0.0';
-import {worldLightGLSL,worldUniforms} from './world-lighting.js?v=4.1.1';
-import {flashlightGLSL,vehicleLightGLSL,vehicleLightUniforms,updateVehicleLightUniforms} from './flashlight.js?v=4.1.1';
+import {worldLightGLSL,worldUniforms} from './world-lighting.js?v=4.1.2';
+import {flashlightGLSL,vehicleLightGLSL,vehicleLightUniforms,updateVehicleLightUniforms} from './flashlight.js?v=4.1.2';
 
 // Original, locally authored geometry. Static details are merged into one draw;
 // only the four wheels and the steering assembly need separate transforms.

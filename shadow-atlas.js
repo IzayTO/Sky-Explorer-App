@@ -24,7 +24,7 @@ export class ConstructionShadows{
   this.u=u;this.empty=u.baseShadowAtlas.value;this.revision=-1;this.scene=new THREE.Scene();this.target=null;
   this.viewport=new THREE.Vector4();this.scissor=new THREE.Vector4();this.clearColor=new THREE.Color();
   this.point=V();this.center=V();this.direction=V();this.matrix=new THREE.Matrix4();
-  this.views=Array.from({length:32},(_,i)=>({camera:i<4?new THREE.OrthographicCamera():new THREE.PerspectiveCamera(90,1,.015,128),position:V().setScalar(Infinity),direction:V(),revision:-1,emitter:null}));
+  this.views=Array.from({length:32},(_,i)=>({camera:i<4?new THREE.OrthographicCamera():new THREE.PerspectiveCamera(90,1,.015,128),position:V().setScalar(Infinity),direction:V(),revision:-1,emitter:null,updated:-Infinity}));
   this.casterU={shadowOrigin:{value:V()},shadowForward:{value:V()},shadowRange:{value:1},shadowRadial:{value:0}};
   this.material=new THREE.ShaderMaterial({uniforms:this.casterU,side:THREE.BackSide,toneMapped:false,
    vertexShader:'varying vec3 casterWorld;void main(){casterWorld=(modelMatrix*vec4(position,1.)).xyz;gl_Position=projectionMatrix*viewMatrix*vec4(casterWorld,1.);}',
@@ -61,7 +61,11 @@ export class ConstructionShadows{
   this.u.baseShadowValid.value[index]=1;
   // A sub-texel celestial movement does not require four attachment passes.
   const positionTolerance=index<4?.04:1e-10,directionTolerance=index<4?2.5e-8:1e-12;
-  if(view.revision===this.revision&&view.emitter===emitter&&position.distanceToSquared(view.position)<positionTolerance&&direction.distanceToSquared(view.direction)<directionTolerance)return;
+  const now=performance.now(),same=view.revision===this.revision&&view.emitter===emitter;
+  if(same&&position.distanceToSquared(view.position)<positionTolerance&&direction.distanceToSquared(view.direction)<directionTolerance)return;
+  // Celestial motion is slow: reuse sub-degree shadows between 12 Hz bakes.
+  // Edits, time jumps and moving headlights still invalidate immediately.
+  if(index<4&&same&&now-view.updated<80&&direction.distanceToSquared(view.direction)<.0001&&position.distanceToSquared(view.position)<4)return;
   camera.coordinateSystem=renderer.isWebGPURenderer?THREE.WebGPUCoordinateSystem:THREE.WebGLCoordinateSystem;
   camera.near=.015;camera.far=far;
   if(index<4){camera.left=camera.bottom=-span/2;camera.right=camera.top=span/2;}
@@ -81,7 +85,7 @@ export class ConstructionShadows{
   const viewportY=renderer.isWebGPURenderer?SIZE-py-size+1:py+1;
   this.target.viewport.set(px+1,viewportY,size-2,size-2);this.target.scissor.copy(this.target.viewport);this.target.scissorTest=true;
   renderer.setRenderTarget(this.target);renderer.render(this.scene,camera);
-  view.position.copy(position);view.direction.copy(direction);view.revision=this.revision;view.emitter=emitter;this.renders++;
+  view.position.copy(position);view.direction.copy(direction);view.revision=this.revision;view.emitter=emitter;view.updated=now;this.renders++;
  }
  prepare(renderer,world,camera){
   if(!world.entities.length){if(this.target)this.release();this.u.baseShadowReady.value=0;return;}

@@ -1,10 +1,10 @@
 import * as THREE from './three.module.js?v=4.0.0';
-import {ITEMS,validStack} from './items.js?v=4.1.1';
-import {createProp,propMaterial,updatePropMaterial} from './props.js?v=4.1.1';
-import {WorldLighting,LAMP_TEMPERATURES} from './world-lighting.js?v=4.1.1';
-import {placement} from './build-placement.js?v=4.1.1';
-import {entityBoxes,boxesOverlap,orientedBox,rayBox} from './spatial.js?v=4.1.1';
-import {BuildIndex,BuildBatches} from './build-acceleration.js?v=4.1.1';
+import {ITEMS,validStack} from './items.js?v=4.1.2';
+import {createProp,propMaterial,updatePropMaterial} from './props.js?v=4.1.2';
+import {WorldLighting,LAMP_TEMPERATURES} from './world-lighting.js?v=4.1.2';
+import {placement} from './build-placement.js?v=4.1.2';
+import {entityBoxes,boxesOverlap,orientedBox,rayBox} from './spatial.js?v=4.1.2';
+import {BuildIndex,BuildBatches} from './build-acceleration.js?v=4.1.2';
 const V=(x=0,y=0,z=0)=>new THREE.Vector3(x,y,z),clone=x=>JSON.parse(JSON.stringify(x));
 const CEILING_OFFSETS=[[0,0],[-.15,0],[.15,0],[0,-.15],[0,.15]];
 export class BuildWorld{
@@ -85,7 +85,7 @@ export class BuildWorld{
   for(const e of this.entities){if(!['floor','foundation'].includes(e.item.kind))continue;const b=e.bounds,minX=Math.max(0,Math.floor((b.min.x-x)*8)),maxX=Math.min(511,Math.floor((b.max.x-x)*8)),minZ=Math.max(0,Math.floor((b.min.z-z)*8)),maxZ=Math.min(511,Math.floor((b.max.z-z)*8));for(let zz=minZ;zz<=maxZ;zz++)for(let xx=minX;xx<=maxX;xx++){const p=this._maskP.set(x+(xx+.5)/8,e.position.y,z+(zz+.5)/8).applyMatrix4(e.inverse),w=e.params.width||e.item.size[0],d=e.params.depth||e.item.size[2];if(Math.abs(p.x)<=w/2&&Math.abs(p.z)<=d/2)this.maskData[zz*512+xx]=255;}}this.mask.needsUpdate=true;this.maskDirty=false;
  }
  configureGraphics(options){this.lights.configureGraphics(options);}
- update(camera,sky,state,t,dt){this.batches.update(this);updatePropMaterial(this.material,sky,camera,state);updatePropMaterial(this.ghostMaterial,sky,camera,state);this.lights.update(this,camera.position,t);this.updateDrops(dt);this.updateMask(camera);if(this.dirty&&t-(this.lastSave||0)>1){this.lastSave=t;this.save();}}
+ update(camera,sky,state,t,dt){this.batches.update(this);updatePropMaterial(this.material,sky,camera,state);updatePropMaterial(this.ghostMaterial,sky,camera,state);this.lights.update(this,camera.position,t,camera);this.updateDrops(dt);this.updateMask(camera);if(this.dirty&&t-(this.lastSave||0)>1){this.lastSave=t;this.save();}}
  distanceTo(e,point){this._v.copy(point);this._v.y=Math.max(e.bounds.min.y,Math.min(e.bounds.max.y,point.y-1.3));e.bounds.clampPoint(this._v,this._p);return this._v.distanceTo(this._p);}
  powered(e){return this.entities.some(p=>['solar','power'].includes(p.item.kind)&&p.position.distanceToSquared(e.position)<18*18);}
 }

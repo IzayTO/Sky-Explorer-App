@@ -1,81 +1,78 @@
-SKY EXPLORER APP — DIAGNÓSTICO 4.1.1
-Fuente: 1271a4190fc78d77038fff4647c3a69aab15d49d
+SKY EXPLORER APP — DIAGNÓSTICO 4.1.2
 
-CAUSA IDENTIFICADA
-Las capturas del usuario muestran 10–12 FPS con solo 13–24 draws. El código
-anterior podía lanzar hasta 1024 visitas de BVH por rayo de luz y píxel.
-Paredes/pisos/techos cercanos multiplicaban ese trabajo por la pantalla entera.
-El pasto y los draw calls no explican por sí solos ese comportamiento.
-No hay una captura de perfilador del iPhone: esta atribución se basa en el
-código, el patrón de las capturas y una prueba local del shader.
+FUENTE REAL
+main de IzayTO/Sky-Explorer-App: 69bfdcae9ab4c303c9dc12c525c22f7d814bed9d.
+Los 63 archivos publicados coincidían con la anterior entrega 4.1.1.
+No se encontró una mezcla de archivos en GitHub. Se comparó también con
+la primera App 4.0.0 conservada localmente. GitHub se utilizó solo para leer.
 
-ARQUITECTURA IMPLEMENTADA
-• Atlas de sombras RGBA8 2048² con profundidad, sin mipmaps ni MSAA.
-  Aproximadamente 32 MiB de adjuntos color/profundidad para el destino activo,
-  sujetos al formato y asignaciones internas del driver. No es una medición
-  del consumo total de la aplicación. El destino inactivo libera su atlas.
-• Cascadas de construcción de 24 y 160 m por fuente celeste (512² por vista).
-  Cuatro lámparas como máximo según el perfil, seis caras 256² cada una.
-  Tres vistas de faros/marcha atrás de 512². El resto del atlas queda reservado.
-• Casters de geometría real; modelo circular de antena conservado. Emisión
-  no actúa como bloque opaco y cada lámpara excluye su propio emisor para
-  evitar autooclusiones negras. Las otras lámparas siguen siendo oclusoras.
-• Comparación de cuatro texeles. Las transiciones que discrepan se resuelven
-  con el BVH exacto; fuera de mapa/alcance se conserva también ese respaldo.
-  Se mantienen aberturas de ventanas/puertas y sombras lejanas.
-• Sin cambios de luz/objetos/región no se redibujan las vistas estáticas.
-  El mapa de faros se actualiza al moverse. El ciclo solar también invalida
-  sus vistas cuando cambia la dirección por encima del umbral subtexel.
-• Limpieza por triángulo dentro de cada viewport: un clear de WebGPU podía
-  limpiar todo el adjunto e invalidar las demás vistas del atlas.
-• Viewports en píxeles físicos del render target, independientes del DPR;
-  origen vertical y sampling adaptados a WebGPU y WebGL.
-• Textura vacía RGBA8, compatible con el atlas real al liberar/recrear, para
-  no cambiar la clase de muestreo de los bind groups WebGPU.
-• Linterna: no repite la oclusión desde la cámara que ya decide la profundidad.
-• Materiales de lámparas con estado independiente. Batching, índice espacial,
-  geometrías compartidas y optimizaciones lunares de 4.1.0 se mantienen.
-• Selección de superficie próxima sin crear, filtrar ni ordenar un array
-  nuevo; auxiliares de sombras reutilizados durante el frame.
+CAUSAS CONCRETAS
+1. Emisor negro en WebGPU: lampColor es THREE.Color (r/g/b), pero el adaptador
+   TSL lo declaraba vec3 y Three intentaba subir x/y/z. Esto producía NaN en
+   el buffer de uniforms. Se reprodujo con el código real de Three r186.
+   El enlace ahora reconoce colores individuales y arrays de colores
+   (también los planetas). Encendido y temperatura siguen siendo independientes.
+2. Las luces se elegían por cercanía a la cámara y Rendimiento dejaba solo dos.
+   Alejarse podía retirar iluminación visible. Ahora todas las lámparas
+   encendidas participan. La selección de cuatro se usa exclusivamente para
+   la caché de sombras. Las restantes mantienen oclusión mediante el BVH.
+3. El cielo completo se calculaba ANTES de los objetos, incluso tras una pared.
+   Se dibujan primero superficies opacas, con pruebas de profundidad para
+   rechazar el cielo oculto. No cambian las ecuaciones astronómicas ni el catálogo.
+4. rAF no tenía límite propio de 60 FPS. En pantallas que entregan callbacks
+   a 120 Hz podía enviar trabajo innecesario. Se limita la exploración a 60,
+   los menús abiertos a 30 y el selector de destinos a 20. La pestaña oculta
+   sigue detenida. No se simulan métricas de GPU ni temperatura.
+5. La Luna se creaba al visitarla, pero después ambos destinos quedaban en
+   memoria. Ahora el anterior libera geometrías, materiales, texturas,
+   mapas de sombras, caché lunar y audio. Solo quedan datos lógicos de sesión.
+6. La resolución baja afectaba también a las estrellas; Rendimiento además
+   desactivaba efectos del cielo. Ahora el paisaje puede bajar de resolución
+   mientras el cielo conserva la escala original de la App (hasta DPR 1,65
+   en móvil). El perfil Rendimiento ya no apaga automáticamente el cielo.
 
-COMPARACIÓN LOCAL
-Prueba: misma pared interior de 512 × 512 píxeles, misma escena, dos rayos de
-luz y ecuaciones reales. Mesa llvmpipe, rasterizado por SOFTWARE en el equipo
-de pruebas, siete muestras tras calentamiento. NO es Safari ni una GPU móvil.
-Se registraron medianas de 34,33 ms (BVH por fragmento) y 4,50 ms (atlas).
-Los tiempos cambiaron entre ejecuciones por carga/JIT del equipo; no equivalen
-a FPS de Sky Explorer ni permiten prometer una mejora porcentual en iPhone.
-Las dos imágenes de esa prueba fueron idénticas. Además, 2196 muestras de
-visibilidad sobre superficies expuestas coincidieron con la oclusión exacta.
+OPTIMIZACIONES IMPLEMENTADAS
+- Vía rápida de uniforms para hasta cuatro lámparas. Para más lámparas,
+  una cuadrícula de 8 m consulta las que pueden alcanzar cada punto;
+  no recorre toda la lista de luces por cada fragmento. Se descarta por
+  alcance antes de leer color y resolver sombras. Los datos de celdas se
+  reconstruyen al cambiar lámparas, no continuamente al mover la cámara.
+- Slots de sombras estables; se evita reordenar/redibujar por cruzar entre luces.
+- Movimiento celeste pequeño reutiliza sus mapas hasta 80 ms. Edición,
+  saltos de tiempo, movimientos grandes y faros invalidan sin esa demora.
+- Cielo definido a resolución independiente: si el paisaje ya usa esa escala,
+  se emplea una sola pasada normal. Si está a menor resolución, un target
+  guarda color/cobertura del mundo, una máscara omite cielo tapado y se
+  compone preservando la transparencia del fantasma y el láser.
+- Se cierran los AudioContext de destinos descargados y se suspenden al pausar.
+- Se conserva la histéresis de resolución automática y no se penalizan los
+  FPS intencionalmente menores de los menús.
 
-COSTES QUE SIGUEN EXISTIENDO
-• Muestreo de suelo/regolito, atmósfera y campo estelar.
-• Relleno de pantalla, ancho de banda y resolución interna del dispositivo.
-• Límites, geometría y coste de dibujar grandes bases/vehículos.
-• Reconstrucción CPU del BVH y casters cuando se coloca/elimina una pieza.
-• Pasadas al modificar luces, conducir con faros o avanzar el ciclo celeste.
-• Respaldo exacto en bordes de sombras, junturas entre caras y fuera de mapa.
-• La precisión finita del atlas puede mostrar aliasing o perder algún detalle
-  más pequeño que un texel. No se garantiza identidad por píxel en todos los
-  ángulos y drivers; los bordes detectados mantienen resolución exacta.
-• La selección de luces conserva los límites de cada perfil de 4.1.0.
-• Temperatura, ahorro de energía y presión de memoria del iPhone pueden
-  limitar los FPS independientemente de estas correcciones.
+DECISIONES Y COSTES RESTANTES
+- No se eliminaron estrellas, césped, modelos, terreno lunar ni funciones.
+  Se mantienen las correcciones de construcción y la eliminación de montañas.
+- No se redujo la resolución de la caché de sombras para disimular el problema.
+- La composición de dos resoluciones usa un target adicional y dos dibujos
+  sencillos a pantalla completa. Solo se activa cuando las escalas difieren;
+  conserva la definición del cielo y descarta los fragmentos ocultos.
+- Muchas lámparas cuyos alcances se solapan siguen costando GPU; las no
+  cacheadas usan sombras exactas, de modo que su luz no se elimina para
+  cumplir un presupuesto. La cuadrícula limita el trabajo a su vecindad.
+- Muchas sombras en movimiento, césped cercano y Vía Láctea visible a
+  pantalla completa siguen consumiendo GPU. Un límite de 60 no garantiza 60.
+- Solo hay un destino residente: el cambio necesita cargar/reconstruir el otro
+  desde los recursos locales y restaurar sus objetos. Muestra “Preparando…”.
+- La caché OFFLINE sí contiene los recursos de los dos destinos. Tener archivos
+  en Cache Storage no equivale a mantener dos escenas/texturas activas en GPU.
+- Safari no proporciona aquí una medida de temperatura del chip. No se ha
+  medido calentamiento, energía, memoria física ni FPS en un iPhone real.
 
-OPTIMIZACIONES QUE NO SE HAN APLICADO
-No se han quitado sombras, piezas, estrellas, césped por defecto ni relieve.
-No se han reducido arbitrariamente geometrías/modelos para resolver el coste.
-No se han fusionado entidades rompiendo edición, picking o guardado.
-No se ha añadido oclusión por habitaciones que pueda ocultar paredes/ventanas.
-No se ha reescrito el motor ni forzado el respaldo WebGL.
-No se han añadido efectos de niebla para esconder el horizonte.
-No se ha acelerado agresivamente la bajada de resolución para enmascarar
-el problema: los perfiles y la histéresis anteriores siguen funcionando.
-
-PRUEBA PENDIENTE EN IPHONE
-Abrir la misma base, con la misma hora y perfil, y comparar exterior/interior,
-linterna apagada/encendida y lámpara apagada/encendida. Esperar a que termine
-la descarga offline; dejar estabilizar FPS unos segundos después de entrar.
-Confirmar versión 4.1.1-shadow-cache y Renderer: WebGPU. Si dice WebGL fallback,
-conservar el motivo diagnóstico: no interpretar el cambio de backend como
-una mejora medida de WebGPU. No se han obtenido FPS físicos de iPhone.
+REFERENCIAS TÉCNICAS CONSULTADAS
+Apple, Optimize Metal apps and games with GPU counters:
+https://developer.apple.com/videos/play/wwdc2020/10603/
+Apple, Harness Apple GPUs with Metal:
+https://developer.apple.com/videos/play/wwdc2020/10602/
+Three.js, How to dispose of Objects:
+https://threejs.org/manual/pages/how-to-dispose-of-objects.html
+Implementación local Three r186: ReferenceNode, UniformArrayNode,
+NodeBuilder y UniformsGroup (tipado y escritura de uniforms).

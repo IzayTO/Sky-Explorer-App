@@ -1,4 +1,4 @@
-import {ITEMS,CATEGORIES,MAX_STACK,itemIcon,validStack} from './items.js?v=4.1.1';
+import {ITEMS,CATEGORIES,MAX_STACK,itemIcon,validStack} from './items.js?v=4.1.2';
 const STORAGE='sky-expedition-inventory-v1';
 export class InventoryStore {
   constructor(){this.slots=Array(40).fill(null);this.selected=0;this.onChange=()=>{};}

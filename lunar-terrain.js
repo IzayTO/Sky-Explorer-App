@@ -1,8 +1,8 @@
 import * as THREE from './three.module.js?v=4.0.0';
-import {worldLightGLSL,worldUniforms} from './world-lighting.js?v=4.1.1';
-import {LunarLightCache,heightGLSL,cacheGLSL} from './lunar-light-cache.js?v=4.1.1';
-import {clamp} from './sky.js?v=4.1.1';
-import {flashlightGLSL,vehicleLightGLSL,vehicleLightUniforms,updateVehicleLightUniforms} from './flashlight.js?v=4.1.1';
+import {worldLightGLSL,worldUniforms} from './world-lighting.js?v=4.1.2';
+import {LunarLightCache,heightGLSL,cacheGLSL} from './lunar-light-cache.js?v=4.1.2';
+import {clamp} from './sky.js?v=4.1.2';
+import {flashlightGLSL,vehicleLightGLSL,vehicleLightUniforms,updateVehicleLightUniforms} from './flashlight.js?v=4.1.2';
 
 // One continuous height field drives both the drawn surface and foot collision.
 // Directional and torch occlusion sample that same field: no fake shadow decals.

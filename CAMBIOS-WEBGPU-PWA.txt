@@ -1,95 +1,99 @@
-SKY EXPLORER APP — CORRECCIÓN 4.1.1
-Versión que debe aparecer en el diagnóstico: 4.1.1-shadow-cache
+SKY EXPLORER APP — 4.1.2-luz-y-cielo
 
-FUENTE
-IzayTO/Sky-Explorer-App, main, commit 1271a4190fc78d77038fff4647c3a69aab15d49d.
-Los 62 archivos de la fuente se contrastaron con sus hashes Git.
-Desarrollo en una copia independiente. GitHub exclusivamente en lectura.
-No se ha modificado IzayTO/Sky-Explorer ni se ha publicado esta entrega.
+Se entrega una actualización de archivos de reemplazo para el main publicado:
+69bfdcae9ab4c303c9dc12c525c22f7d814bed9d. GitHub NO fue modificado.
 
-QUÉ CORRIGE ESTA ENTREGA
-La versión anterior ya reducía draw calls, pero seguía recorriendo el árbol
-BVH de construcciones por cada píxel y por cada luz. Una pared cercana
-ocupando toda la pantalla podía costar mucho aunque solo hubiera 13 draws.
-Ahora las sombras de construcciones se rasterizan en un atlas y se reutilizan.
-El dibujo normal compara cuatro muestras de profundidad; en transiciones de
-sombra y fuera del alcance del atlas se conserva la comprobación exacta BVH.
-No se apagan las sombras, no se ocultan paredes y no se alteran colisiones.
+CAMBIOS
+- Corregido el color de emisión de las lámparas en WebGPU (NaN por tipo vec3).
+  El arreglo también cubre los colores de los planetas.
+- Todas las lámparas encendidas iluminan con independencia de la posición del
+  jugador y el perfil. Las cuatro luces de caché ya no son un límite de luces.
+- Solo permanece cargado el destino activo. Se guardan/restauran objetos,
+  objetos tirados, historial de deshacer y vehículo al cambiar de paisaje.
+  Se liberan sus recursos gráficos y se muestra Preparando… al cargar el otro.
+- Cielo visible después de superficies opacas: se evita calcular píxeles
+  tapados por paredes/terreno. Se mantiene la apariencia y toda la astronomía.
+- Resolución del cielo separada de la del paisaje: estrellas/astros conservan
+  definición cuando bajas resolución 3D. La interfaz sigue siendo DOM nítido.
+- Render limitado a 60 FPS de exploración, 30 en menús y 20 en el selector.
+- Rendimiento conserva el cielo completo. Una migración SOLO de preferencias
+  gráficas restaura ese valor del antiguo preset una vez; tu elección posterior
+  de desactivar Cielo avanzado se sigue guardando. Las otras preferencias se
+  conservan. Calidad móvil usa el límite original DPR 1,65 en vez de subir a 2.
+- Se suspenden sonidos pausados y se cierra el audio del destino descargado.
+- Se conservan las correcciones de sombras/antena, los controles, pasto,
+  construcción, cimientos, rampas, telescopio, inventario y guardados anteriores.
 
-El atlas contiene vistas cercanas/lejanas del Sol y la Luna/Tierra, las seis
-caras de cada lámpara seleccionada y los faros del vehículo. Las vistas de
-lámparas quietas permanecen almacenadas. Los cambios de geometría, fuente de
-luz o región de cámara invalidan únicamente las vistas que deben actualizarse.
-No se recorren ni se fusionan de nuevo las geometrías durante cada frame.
-Al salir de un destino se libera su atlas; al volver se prepara de nuevo.
+RENDERER
+WebGPU sigue siendo principal cuando puede inicializarse. Todos los shaders
+modificados tienen su equivalente TSL generado. WebGL sigue siendo respaldo
+completo; no se fuerza para atribuirle una mejora a WebGPU. Three r186 permanece
+local y sin modificaciones. No hay dependencias nuevas externas.
 
-La linterna nace en el punto de vista: una superficie oculta por una pared
-ya ha sido descartada por la profundidad de la cámara. Se evita repetir ese
-mismo rayo de oclusión, conservando cono, color, alcance y caída de intensidad.
-Los faros y lámparas, que están en otras posiciones, conservan sombras propias.
-Cada lámpara dispone ahora de sus valores independientes de encendido/color;
-no depende de cambiar un único material compartido justo antes de dibujarla.
+PWA
+Se conserva el Service Worker atómico con SHA-256 y versiones fijadas por
+ventana. Se regeneró DESPUÉS de completar código y documentación, con los
+recursos originales completos más los nuevos. El ZIP no requiere ejecutar
+Python, npm ni terminal. El nombre real de la caché tiene la forma:
+sky-explorer-_Sky_Explorer_App_-v4-<hash de versión>
+El hash se ve en el diagnóstico; procede del contenido de todos los recursos
+y la plantilla. No se usa un hash antiguo con archivos nuevos.
 
-INTERFAZ Y CONSTRUCCIÓN
-• Lápiz, catálogo y mochila comparten una fila flex con espacio entre botones,
-  en lugar de tres posiciones independientes que acababan superpuestas.
-  Se conserva la ocultación contextual de controles dentro del telescopio.
-• El cimiento nuevo parte de 8 × 8 m, compatible con módulos de 4 m.
-  Sigue admitiendo sus ajustes de tamaño. Las bases YA GUARDADAS mantienen
-  sus medidas: no se agrandan ni se desplazan automáticamente.
-• Techos junto a paredes respetan los límites del piso/cimiento de soporte;
-  mirar el remate exterior no empuja la cubierta fuera de la plataforma.
-• Rampas adaptables de 2 m con y sin barandal; variantes anchas que toman
-  todo el ancho del borde del cimiento, también con y sin barandal.
-  Se muestrea el terreno a lo ancho para apoyar la rampa en pendientes.
-• Los barandales son sólidos para el jugador. Se permiten uniones de extremos
-  y contacto entre barandales laterales de rampas adyacentes. Una pieza
-  duplicada en el mismo lugar continúa siendo rechazada.
-• Se conserva la puerta original. Se añaden un marco con paso de 2,4 m y un
-  pórtico con paso de 4 m. Todos estos props están disponibles en ambos mundos.
-• Las rampas antiguas bajas conservan su apariencia sin barandales al cargar.
+Al publicarlo todo junto, la PWA descarga la versión nueva, rechaza archivos
+incompletos y espera que aceptes Guardar y recargar. No limpia localStorage,
+IndexedDB, inventarios ni construcciones. No modifica el manifiesto existente.
+Los archivos de ambos mundos permanecen offline, aunque solo un mundo esté
+residente en memoria. iOS puede expulsar almacenamiento bajo presión; el
+estado Disponible sin conexión sigue siendo la comprobación antes de viajar.
 
-LO QUE SE CONSERVA DE 4.1.0
-Montañas terrestres eliminadas; suelo verde; pasto opcional y sus densidades;
-perfiles Automático/Rendimiento/Equilibrado/Calidad; resolución dinámica;
-cielo y catálogo de estrellas; ciclo temporal; relieve y gravedad lunares;
-antena con sombra circular; iluminación lunar sin Sol desde abajo; vehículos;
-inventario 30+10; herramientas; construcción/edición/colisiones/deshacer;
-sonido, cuaderno, importación/exportación y guardados.
+ARCHIVOS
+Nuevos (añadir al mismo nivel):
+  environment-resources.js
+  landscape-renderer.js
 
-RENDERERS
-Three.js local 0.186.1 / r186, sin CDN y sin cambio de motor.
-WebGPU principal; WebGL de respaldo si falla o no está disponible.
-Las ecuaciones GLSL modificadas tienen sus 19 variantes TSL correspondientes
-regeneradas, incluyendo el atlas y su borrado por región. No se obliga a usar
-WebGL para aparentar una mejora. Las librerías intactas mantienen ?v=4.0.0;
-los módulos del juego usan ?v=4.1.1 para conservar una identidad coherente.
+Existentes (reemplazar completos):
+  CAMBIOS-WEBGPU-PWA.txt
+  DIAGNOSTICO-RENDIMIENTO.txt
+  LEEME.txt
+  ORIGEN-REPOSITORIO.json
+  PASOS-PARA-ISAI.txt
+  VERIFICACION.txt
+  app.js
+  build-world.js
+  celestial.js
+  controls.js
+  expedition.js
+  field-effects.js
+  field-guide.js
+  gpu-adapter.js
+  gpu-materials.js
+  index.html
+  inventory.js
+  lunar-sky.js
+  lunar-sound.js
+  lunar-terrain.js
+  performance-settings.js
+  props.js
+  pwa.js
+  renderer-factory.js
+  science.js
+  service-worker.js
+  shadow-atlas.js
+  sky.js
+  sound.js
+  styles.css
+  terrain.js
+  vehicle-models.js
+  vehicles.js
+  world-lighting.js
 
-GUARDADOS
-Se mantienen las claves y formatos existentes de inventarios, mundos, cuaderno,
-preferencias y expediciones. No se borra localStorage ni IndexedDB.
-El tamaño predeterminado nuevo del cimiento NO cambia las bases anteriores.
-Los nuevos IDs de catálogo se añaden; ninguno de los antiguos se elimina.
+Total: 36 archivos (34 reemplazos + 2 nuevos).
 
-OFFLINE
-service-worker.js regenerado con los 60 recursos finales de la copia completa,
-no solamente con el contenido del ZIP. Cada tamaño y SHA-256 se ha actualizado.
-Incluye shadow-atlas.js, las bibliotecas locales y todos los assets intactos.
-Caché: sky-explorer-_Sky_Explorer_App_-v4-<digest de 16 caracteres>.
-El digest lo genera preparar-offline.py a partir del contenido y la plantilla.
-Se conservan publicación atómica, rechazo de descargas parciales y versiones
-por ventana. La actualización espera aceptación o cierre de ventanas antiguas.
-No se cambia la plantilla ni el generador porque su estrategia ya era correcta.
-El ZIP está preparado: el usuario no tiene que ejecutar ninguna herramienta.
-En futuras entregas hay que regenerar el worker DESPUÉS del último cambio.
-
-ENTREGA
-SKY_EXPLORER_APP_CORRECCION_RENDIMIENTO.zip contiene archivos COMPLETOS,
-nuevos o modificados, sueltos en la raíz. Es una actualización sobre main,
-no una copia autónoma del proyecto. Conserva todos los originales no incluidos.
-El módulo nuevo es shadow-atlas.js. Lista completa en PASOS-PARA-ISAI.txt.
+Varios módulos solo cambian su sufijo de import a ?v=4.1.2 para que todo el
+grafo use exactamente los mismos módulos. Los vendors conservan ?v=4.0.0.
+No se cambia su lógica ni las licencias. No elimines archivos ajenos a la lista.
 
 LÍMITES
-La reducción del coste del shader se comprobó localmente, no en un iPhone.
-No se promete una cantidad de FPS. Véanse VERIFICACION.txt y
-DIAGNOSTICO-RENDIMIENTO.txt para las pruebas y límites concretos.
+No se ha medido en un iPhone real. El resultado reduce trabajo comprobable,
+pero no garantiza una temperatura ni FPS específicos. Consulta VERIFICACION.txt
+y DIAGNOSTICO-RENDIMIENTO.txt para separar pruebas locales y pendientes físicas.

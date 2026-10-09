@@ -1,5 +1,5 @@
 import * as THREE from './three.module.js?v=4.0.0';
-import {clamp} from './sky.js?v=4.1.1';
+import {clamp} from './sky.js?v=4.1.2';
 
 export const cycleHour=value=>((Number(value)%24)+24)%24;
 // A native, keyboard-accessible range, with an immediate midnight wrap. While a

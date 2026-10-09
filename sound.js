@@ -36,7 +36,8 @@ export class Ambience{
   apply(){if(!this.ctx)return;this.master.gain.setTargetAtTime(this.active&&!this.muted?this.volume*.32:0,this.ctx.currentTime,.35);}
   setVolume(v){this.volume=v;this.apply();}
   setMuted(v){this.muted=v;this.apply();}
-  pause(){this.active=false;this.apply();}
+  pause(){this.active=false;this.apply();this.ctx?.suspend().catch(()=>{});}
+  dispose(){this.active=false;const ctx=this.ctx;this.ctx=null;if(ctx&&ctx.state!=='closed')ctx.close().catch(()=>{});}
   update(t,night,hour=12){
     if(!this.ctx||!this.active||this.ctx.state!=='running')return;
     const now=this.ctx.currentTime,p=ambienceProfile(hour,night),gust=Math.sin(t*p.gust)*.018+Math.sin(t*.137+2)*.012;

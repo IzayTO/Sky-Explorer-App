@@ -1,113 +1,64 @@
-PASOS PARA ISAI — CORRECCIÓN 4.1.1
+PASOS PARA ISAI — QUÉ HAGO AHORA
 
-QUÉ CONTIENE
-Esta entrega actualiza tu Sky-Explorer-App actual. No es el proyecto entero.
-Conserva los originales que no estén incluidos. El ZIP trae archivos completos,
-sueltos; puedes reemplazarlos con tu método habitual en Archivos.
-
-1. En ChatGPT toca SKY_EXPLORER_APP_CORRECCION_RENDIMIENTO.zip → Compartir →
-   Guardar en Archivos. En Archivos toca el ZIP para descomprimirlo.
-2. Si mantienes una carpeta original, sustituye únicamente los nombres de esta
-   lista y añade shadow-atlas.js. No borres texturas, librerías ni otros archivos.
-   También puedes subir estos archivos directamente al repositorio actual.
-3. Abre Safari → github.com/IzayTO/Sky-Explorer-App → rama main → raíz.
-   Toca Add file / Añadir archivo → Upload files / Subir archivos → selecciona
-   TODOS los archivos sueltos de esta entrega, no el ZIP ni la carpeta.
-4. Revisa los nombres → Commit changes / Confirmar cambios. Al coincidir
-   ruta y nombre, GitHub reemplaza los anteriores; shadow-atlas.js se añade.
-   Sube todo en una sola publicación. No necesitas eliminar primero los viejos.
-   No hagas esto en IzayTO/Sky-Explorer.
-5. Espera el despliegue verde de GitHub Pages en Actions. En Settings → Pages
-   debe seguir main / (root). No tienes que compilar ni ejecutar Python o npm.
-6. Si ya tienes la aplicación instalada, abre SU MISMO ICONO con Internet.
-   Vuelve a la pantalla de destinos. No borres ni reinstales el icono y no
-   borres los datos de Safari: así conservas su almacenamiento actual.
-7. Mantén pulsado el nombre de Sky Explorer en la pantalla de destinos durante
-   aproximadamente un segundo → Buscar actualización → Cerrar. Espera.
-   Cuando aparezca Actualización lista · Guardar y recargar, tócalo.
-8. Espera a que la aplicación recargue y muestre Disponible sin conexión ·
-   Tierra y Luna. Mantén pulsado otra vez el nombre para comprobar:
-   Versión: 4.1.1-shadow-cache
-   Renderer: WebGPU, si tu iPhone lo admite.
-   Ventana: PWA / pantalla de inicio, si la abriste desde el icono.
-   Offline: Tierra y Luna guardadas.
-   Si hay estructuras en el destino que visitaste, Sombras de construcciones
-   indicará mapas reutilizados. Este dato no es una medición de FPS.
-9. Entra a Tierra → Configuración → Rendimiento → Mostrar FPS. Visita la misma
-   base y prueba exterior/interior, linterna y lámparas. Repite en Luna.
-   Usa la misma hora y perfil al comparar y deja estabilizar el promedio.
-   Esta corrección funciona en todos los perfiles, no solo en Rendimiento.
-10. Para probar offline, primero confirma versión y descarga completa en la
-    app instalada. Ciérrala → activa modo avión y desactiva también Wi-Fi →
-    abre el mismo icono → entra a Tierra y Luna. Después restablece la conexión.
-
-SI NO TENÍAS ICONO
-Abre https://izayto.github.io/Sky-Explorer-App/ en Safari → Compartir → Añadir
- a pantalla de inicio → Añadir. Abre ese icono conectado y espera la descarga
-completa allí también. La PWA y una pestaña de Safari pueden tener guardados
-separados; utiliza Exportar/Importar expedición si necesitas trasladarlos.
-
-SI SIGUE MOSTRANDO 4.1.0
-No basta con que diga Disponible sin conexión: esa frase puede corresponder
-al caché viejo. Comprueba la VERSIÓN en el diagnóstico.
-Cierra todas las pestañas de la App y la app instalada, reabre conectado y
-busca actualizaciones. Confirma también que terminó el despliegue de GitHub.
-Si aún conserva la versión anterior: diagnóstico → Restablecer solo la caché
-offline → cierra todas sus ventanas y la app → reabre con Internet → espera.
-Ese botón borra solo archivos offline propios, no bases, inventarios ni cuaderno.
-No uses Borrar historial y datos de sitios web para hacer esta actualización.
-Si dice descarga pendiente, espera con Internet; no pruebes offline todavía.
-
-SI APARECE WEBGL FALLBACK
-Lee el motivo mostrado en el diagnóstico. Es el respaldo, no WebGPU.
-No se ha cambiado a WebGL deliberadamente para aparentar mayor velocidad.
-Si necesitas comunicar un fallo, envía versión, renderer, motivo y captura FPS.
-
-PARA FUTURAS ACTUALIZACIONES
-Sube siempre juntos todos los archivos de la entrega, incluido su worker ya
-preparado. Después repite Buscar actualización → Guardar y recargar.
-Conserva una copia anterior del proyecto y una exportación de tu expedición.
-Si decides volver a una copia anterior, sube su conjunto coherente de archivos
-y su service-worker.js; no combines shaders nuevos con worker/materiales viejos.
-Los IDs de props añadidos en esta versión no existen en versiones anteriores:
-exporta la expedición antes de cualquier vuelta atrás para conservarla.
-
-LISTA EXACTA DE ARCHIVOS DE ESTE ZIP
-
-NUEVO (1):
-shadow-atlas.js
-
-REEMPLAZAR (31):
-CAMBIOS-WEBGPU-PWA.txt
-DIAGNOSTICO-RENDIMIENTO.txt
-PASOS-PARA-ISAI.txt
-VERIFICACION.txt
-app.js
-build-placement.js
-build-world.js
-celestial.js
-controls.js
-expedition.js
-field-guide.js
-gpu-adapter.js
-gpu-materials.js
-index.html
-inventory.js
-items.js
-lunar-sky.js
-lunar-sound.js
-lunar-terrain.js
-props.js
-pwa.js
-renderer-factory.js
-science.js
-service-worker.js
-sky.js
-spatial.js
-styles.css
-terrain.js
-vehicle-models.js
-vehicles.js
-world-lighting.js
-
-Total: 32 archivos.
+1. Descarga SKY_EXPLORER_APP_OPTIMIZACION_ARCHIVOS_REEMPLAZO.zip.
+   Toca Compartir → Guardar en Archivos. Elige una carpeta nueva para esta entrega.
+2. En Archivos, toca el ZIP una vez. Abre la carpeta descomprimida.
+   Dentro están los archivos sueltos completos; esta entrega NO es una copia
+   de todo el proyecto. Conserva tu carpeta original y tu copia anterior.
+3. Si prefieres tu método: en tu carpeta original elimina únicamente los
+   nombres indicados como REEMPLAZAR en CAMBIOS-WEBGPU-PWA.txt; mueve ahí
+   los nuevos del mismo nombre. Añade también los dos módulos nuevos.
+   No toques los demás archivos.
+4. En Safari abre https://github.com/IzayTO/Sky-Explorer-App y selecciona main.
+   Toca Add file / Añadir archivo → Upload files / Subir archivos → Choose
+   your files / Seleccionar archivos. Selecciona TODOS los archivos sueltos
+   de esta entrega, incluidos los dos nuevos y service-worker.js.
+5. No elimines primero archivos en GitHub: subir al mismo lugar los mismos
+   nombres los reemplaza. No subas el ZIP ni una carpeta contenedora.
+   Revisa que no tengan sufijos como “(1)” y confirma todo junto en un commit.
+6. Toca Commit changes / Confirmar cambios. Puedes escribir “Corrección 4.1.2”.
+7. En Settings → Pages conserva Deploy from a branch → main → /(root).
+   GitHub publica automáticamente; espera que el despliegue termine en verde.
+8. Abre tu icono instalado de Sky Explorer, CON INTERNET. Vuelve al selector
+   Tierra/Luna. Espera “Actualización lista · Guardar y recargar” y tócalo.
+   Esto guarda la partida y acepta la nueva versión. No necesitas reinstalar.
+9. Espera “Disponible sin conexión · Tierra y Luna”. Mantén presionado el
+   título “A CIELO ABIERTO” unos 0,85 segundos. Debe indicar:
+   Versión: 4.1.2-luz-y-cielo
+   Renderer: WebGPU (si tu Safari lo admite; si usa fallback explica el motivo)
+   Ventana: PWA / pantalla de inicio
+   Offline: Tierra y Luna guardadas
+10. Para comparar el aspecto original: Configuración → Rendimiento →
+    Restablecer configuración gráfica. Vuelve a Automático, cielo completo y
+    resolución automática. NO borra partidas. También puedes usar Rendimiento:
+    ahora conserva el cielo completo; bajar resolución solo afecta al paisaje.
+11. Comprueba una lámpara encendida, cambia cálida/neutra/fría y apágala/préndela.
+    Aléjate mirando la habitación. La iluminación no debe apagarse por alejarte.
+    Viaja Tierra → Luna → Tierra: verás “Preparando…”; la base debe conservarse.
+    En el diagnóstico “Mundo cargado” debe mostrar solo el destino activo.
+12. Activa Mostrar FPS. Compara el MISMO lugar, luz, hora y ajustes después
+    de varios minutos, sin grabar pantalla durante la comparación. El contador
+    muestra tiempo entre frames, no milisegundos medidos de GPU.
+13. Para probar offline, espera la confirmación offline dentro de la app,
+    ciérrala, activa modo avión y ábrela desde su icono. Prueba ambos destinos.
+    No borres cachés ni datos para hacer esta prueba.
+14. Si aún ves la versión anterior: vuelve al selector, mantén pulsado el
+    título y toca Buscar actualización. Espera y acepta Guardar y recargar.
+    Cierra las otras pestañas y ventanas de Sky Explorer antes de reabrir.
+    No borres los datos de Safari ni desinstales la app para actualizarla.
+15. Solo si sigue atascada, conectado a Internet usa en ese mismo diagnóstico
+    “Restablecer solo la caché offline”; después cierra TODAS las ventanas y
+    la app, y vuelve a abrir conectado. Esa acción conserva los guardados,
+    pero debes esperar de nuevo a que termine la descarga offline.
+16. Si aún no la instalaste: abre https://izayto.github.io/Sky-Explorer-App/
+    en Safari → Compartir → Añadir a pantalla de inicio → Añadir. Abre el
+    icono con Internet y verifica también ahí el estado offline.
+17. Futuras entregas: sube todos sus reemplazos y su Service Worker juntos.
+    Acepta la actualización desde la pantalla de destinos. No hace falta
+    generar nada en tu iPhone. Si editas código por tu cuenta, necesitarás
+    regenerar el worker con hashes nuevos antes de publicarlo.
+18. Para volver atrás si falla: conserva tu copia completa previa y sube
+    TODOS los archivos de aquella versión, incluido su service-worker.js,
+    juntos. Aplica esa actualización como arriba. No borres los guardados.
+    Los dos módulos nuevos pueden quedar sin uso; la versión anterior no
+    los importa. Exporta tu expedición desde el menú antes de una reversión.

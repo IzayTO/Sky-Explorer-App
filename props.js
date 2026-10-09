@@ -1,7 +1,7 @@
 import * as THREE from './three.module.js?v=4.0.0';
-import {ITEMS,PALETTE as P} from './items.js?v=4.1.1';
-import {flashlightGLSL,vehicleLightGLSL,vehicleLightUniforms,updateVehicleLightUniforms} from './flashlight.js?v=4.1.1';
-import {worldLightGLSL,worldUniforms} from './world-lighting.js?v=4.1.1';
+import {ITEMS,PALETTE as P} from './items.js?v=4.1.2';
+import {flashlightGLSL,vehicleLightGLSL,vehicleLightUniforms,updateVehicleLightUniforms} from './flashlight.js?v=4.1.2';
+import {worldLightGLSL,worldUniforms} from './world-lighting.js?v=4.1.2';
 const V=(a)=>new THREE.Vector3(...a),cache=new Map();
 // Each authored prop is one merged, coloured mesh. Shared immutable geometry
 // is reused across instances, ghost previews and pickups; no external models.
@@ -82,3 +82,6 @@ export function propGeometry(id,params={}){
  const g=p.finish();g.userData.owned=k==='foundation'||k==='telescope'||item.adaptive;if(!g.userData.owned)cache.set(key,g);return g;
 }
 export function createProp(id,material,params={}){const mesh=new THREE.Mesh(propGeometry(id,params),material);mesh.name=ITEMS[id].name;return mesh;}
+
+// World transitions release buffers as well as scene references.
+export function disposePropCache(){for(const geometry of cache.values())geometry.dispose();cache.clear();}

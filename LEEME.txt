@@ -1,37 +1,19 @@
-SKY EXPLORER 4.0 — WEBGPU + PWA
+SKY EXPLORER APP — ACTUALIZACIÓN 4.1.2
 
-Este ZIP es el PROYECTO COMPLETO. Funciona en una carpeta vacía publicada
-por HTTPS. No necesita npm, Node, Vite, un CDN ni compilar desde el iPhone.
+Este ZIP contiene SOLO archivos completos nuevos/modificados para reemplazar
+los de IzayTO/Sky-Explorer-App, main. No es el proyecto completo.
+Sube los archivos sueltos a la raíz; no subas el ZIP ni una carpeta contenedora.
+No borres previamente los archivos existentes. Los nombres iguales se reemplazan.
+Conserva los archivos del repositorio que no aparecen en el ZIP.
 
-Sube TODOS los archivos sueltos del ZIP a la raíz de IzayTO/Sky-Explorer,
-en main, reemplazando los del mismo nombre. No subas el ZIP como archivo.
-Conserva Settings → Pages → Deploy from a branch → main → /(root).
-Abre https://izayto.github.io/Sky-Explorer/ y espera a que aparezca
-“Disponible sin conexión · Tierra y Luna”. Instálalo desde Compartir →
-Añadir a pantalla de inicio. Abre ese icono conectado y espera nuevamente
-el estado offline antes de activar modo avión.
+Página: https://izayto.github.io/Sky-Explorer-App/
+Versión de diagnóstico: 4.1.2-luz-y-cielo
 
-No se ha modificado el repositorio remoto. No se han cambiado los formatos
-ni las claves de mochila, bases, preferencias o cuaderno.
+No se escribió en GitHub. No se cambiaron las claves ni los formatos de bases,
+inventario, cuaderno ni expediciones. No hay que compilar ni ejecutar comandos.
+La versión offline ya está regenerada para el conjunto completo de recursos.
 
-DOCUMENTOS
-CAMBIOS-WEBGPU-PWA.txt: renderer, caché, archivos nuevos y limitaciones.
-DIAGNOSTICO-RENDIMIENTO.txt: auditoría CPU/GPU y optimizaciones.
-VERIFICACION.txt: pruebas realizadas y límites de esas comprobaciones.
-PASOS-PARA-ISAI.txt: instalación, actualización, diagnóstico y vuelta atrás.
-HISTORIAL-3.2.txt: documentación anterior conservada como historial.
-ORIGEN-REPOSITORIO.json: árbol y hashes de la fuente auditada.
-
-DIAGNÓSTICO SIN HERRAMIENTAS DE DESARROLLO
-En la pantalla donde eliges Tierra o Luna, mantén el dedo sobre
-“A CIELO ABIERTO” unos 0,85 segundos. El panel indica renderer, versión,
-PWA, caché y estado offline. No permanece encima del juego.
-También puedes abrir la URL con ?diagnostico=1.
-
-La entrega incorpora WebGPU real y fallback WebGL. Se han validado las
-compilaciones y la lógica; no se afirma una medición de FPS ni una revisión
-visual completa en un iPhone físico. Lee VERIFICACION.txt.
-
-Para jugar no ejecutes preparar-offline.py. Solo es la herramienta opcional
-para que un desarrollador regenere service-worker.js al editar archivos.
-El ZIP ya trae el Service Worker preparado.
+PASOS-PARA-ISAI.txt: publicación y aplicación de la actualización.
+CAMBIOS-WEBGPU-PWA.txt: cambios y lista de reemplazos.
+DIAGNOSTICO-RENDIMIENTO.txt: causas, soluciones y límites de rendimiento.
+VERIFICACION.txt: pruebas realizadas y qué falta comprobar en el iPhone.
