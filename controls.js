@@ -33,13 +33,24 @@ export class Walker{
     });window.addEventListener('keyup',e=>this.keys.delete(e.code));window.addEventListener('blur',()=>this.resetInput());window.addEventListener('pagehide',()=>this.resetInput());document.addEventListener('visibilitychange',()=>this.resetInput());
   }
   bindJoystick(el,thumb){
-    this.joyEl=el;this.thumb=thumb;
-    const update=e=>{const r=el.getBoundingClientRect(),radius=r.width*.31;let x=(e.clientX-r.left-r.width/2)/radius,y=(r.top+r.height/2-e.clientY)/radius;const length=Math.hypot(x,y);if(length>1){x/=length;y/=length;}const dead=.10,scale=length>dead?(Math.min(1,length)-dead)/(1-dead)/Math.min(1,length):0;this.joy={x:x*scale,y:y*scale};thumb.style.transform=`translate(${x*radius}px,${-y*radius}px)`;};
-    el.addEventListener('pointerdown',e=>{if(!this.enabled||this.joyId!==null)return;this.joyId=e.pointerId;thumb.style.transition='none';el.setPointerCapture(e.pointerId);document.getElementById('world').focus({preventScroll:true});update(e);e.preventDefault();});
-    el.addEventListener('pointermove',e=>{if(this.enabled&&e.pointerId===this.joyId){update(e);e.preventDefault();}});
-    const stop=e=>{if(this.joyId===e.pointerId)this.releaseJoystick();};['pointerup','pointercancel','lostpointercapture'].forEach(t=>el.addEventListener(t,stop));['touchstart','touchmove'].forEach(t=>el.addEventListener(t,e=>e.preventDefault(),{passive:false}));
+    this.joyEl=el;this.thumb=thumb;this.joyTouchId=null;let rect;
+    const outside=e=>e.clientX<=0||e.clientY<=0||e.clientX>=window.innerWidth||e.clientY>=window.innerHeight;
+    const update=e=>{const r=rect,radius=r.width*.31;let x=(e.clientX-r.left-r.width/2)/radius,y=(r.top+r.height/2-e.clientY)/radius;const length=Math.hypot(x,y);if(length>1){x/=length;y/=length;}const dead=.10,scale=length>dead?(Math.min(1,length)-dead)/(1-dead)/Math.min(1,length):0;this.joy.x=x*scale;this.joy.y=y*scale;thumb.style.transform=`translate(${x*radius}px,${-y*radius}px)`;};
+    el.addEventListener('pointerdown',e=>{if(!this.enabled||this.joyId!==null||e.button!==0)return;this.joyId=e.pointerId;rect=el.getBoundingClientRect();thumb.style.transition='none';try{el.setPointerCapture(e.pointerId);}catch{}document.getElementById('world').focus({preventScroll:true});update(e);e.preventDefault();});
+    // Safari can finish an edge gesture outside the captured element. Listen
+    // globally in capture phase; releasing another finger must not stop walking.
+    window.addEventListener('pointermove',e=>{if(e.pointerId!==this.joyId)return;if(!this.enabled||(e.pointerType==='touch'&&outside(e))||(e.pointerType==='mouse'&&e.buttons===0)){this.releaseJoystick();return;}update(e);e.preventDefault();},{capture:true,passive:false});
+    const stop=e=>{if(this.joyId===e.pointerId)this.releaseJoystick();};
+    for(const type of ['pointerup','pointercancel'])window.addEventListener(type,stop,true);
+    el.addEventListener('lostpointercapture',stop);
+    el.addEventListener('touchstart',e=>{if(this.enabled&&this.joyTouchId===null&&e.changedTouches.length)this.joyTouchId=e.changedTouches[0].identifier;e.preventDefault();},{passive:false});
+    el.addEventListener('touchmove',e=>e.preventDefault(),{passive:false});
+    const touchStop=e=>{if(this.joyId===null)return;for(const t of e.changedTouches)if(t.identifier===this.joyTouchId){this.releaseJoystick();return;}if(!e.touches.length)this.releaseJoystick();};
+    for(const type of ['touchend','touchcancel'])window.addEventListener(type,touchStop,{capture:true,passive:true});
+    window.addEventListener('touchmove',e=>{if(this.joyId===null)return;for(const t of e.changedTouches)if(t.identifier===this.joyTouchId&&outside(t)){this.releaseJoystick();return;}},{capture:true,passive:true});
+    window.addEventListener('resize',()=>this.releaseJoystick());
   }
-  releaseJoystick(){const id=this.joyId;this.joyId=null;this.joy={x:0,y:0};if(this.thumb){this.thumb.style.transition='transform 180ms cubic-bezier(.2,.7,.2,1)';this.thumb.style.transform='';}if(id!==null&&this.joyEl?.hasPointerCapture(id))this.joyEl.releasePointerCapture(id);}
+  releaseJoystick(){const id=this.joyId;this.joyId=this.joyTouchId=null;this.joy.x=this.joy.y=0;if(this.thumb){this.thumb.style.transition='transform 180ms cubic-bezier(.2,.7,.2,1)';this.thumb.style.transform='';}try{if(id!==null&&this.joyEl?.hasPointerCapture(id))this.joyEl.releasePointerCapture(id);}catch{}}
   bindActionButton(el,action,hold=false){
     let pointer=null,lastX=0,lastY=0;
     const stop=e=>{if(pointer!==e.pointerId)return;const id=pointer;pointer=null;this.actionPointers.delete(id);if(hold)action(false);el.classList.remove('held');if(el.hasPointerCapture(id))el.releasePointerCapture(id);};

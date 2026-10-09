@@ -1,6 +1,6 @@
 import * as THREE from './three.module.js?v=4.0.0';
 
-export const RELEASE='4.1.2-luz-y-cielo';
+export const RELEASE='4.1.3-modos-vista';
 const recoveryKey='sky-renderer-recovery-'+RELEASE;
 export const graphicsInfo={version:RELEASE,three:THREE.REVISION,renderer:'Iniciando',reason:'',ready:false,world:'earth',pixelRatio:1,averageFrameMs:null,drawCalls:null};
 window.SkyDiagnostics=graphicsInfo;

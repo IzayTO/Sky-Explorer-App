@@ -64,6 +64,7 @@
         <p class="panel-note" id="sky-note">Su brillo aparece al caer la noche y se atenúa con la luz de la Luna.</p>
       </div>
       <div id="walk-settings" role="tabpanel" aria-labelledby="walk-tab" hidden>
+        <div class="field compact"><label class="field-label" for="view-mode">Modo de vista · Ojo</label><select id="view-mode" aria-describedby="view-mode-note"><option value="clean">Vista limpia</option><option value="walk">Paseo</option><option value="explore">Exploración</option></select><p id="view-mode-note" class="panel-note">Solo el ojo para volver a los controles. Arrastra para mirar.</p></div>
         <div class="field"><div class="field-label"><label for="fov">Campo de visión</label><output id="fov-value">100°</output></div><input id="fov" type="range" min="55" max="120" value="100" step="1"><p id="fov-note" class="panel-note">Se ajusta con el telescopio guardado.</p></div>
         <div class="field"><div class="field-label"><label for="speed">Velocidad al caminar</label><output id="speed-value">1.0×</output></div><input id="speed" type="range" min="0.4" max="4" value="1" step="0.1"></div>
         <div class="field"><div class="field-label"><label for="volume">Sonido del entorno</label><output id="volume-value">35 %</output></div><input id="volume" type="range" min="0" max="100" value="35" step="1"></div>

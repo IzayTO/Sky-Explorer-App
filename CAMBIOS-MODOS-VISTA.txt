@@ -1,0 +1,76 @@
+SKY EXPLORER APP — 4.1.3-modos-vista
+
+Actualización pequeña sobre main de IzayTO/Sky-Explorer-App:
+3c61f10de700d376f6057762ab0732fa4689f9d6.
+Se verificaron los 65 archivos de esa versión. GitHub se usó solo para leer.
+
+TRES MODOS DEL OJO
+Abre Configuración → Exploración → Modo de vista · Ojo.
+- Vista limpia: solamente el ojo para regresar. Es la opción predeterminada.
+- Paseo: ojo, joystick y linterna.
+- Exploración: ojo, joystick, linterna, correr y saltar. Permite sentarse y
+  levantarse de sillas; también entrar/salir de vehículos, usar faros,
+  impulso y salto. Cada control aparece cuando corresponde a esa situación.
+
+Selecciona un modo, cierra Opciones y toca el ojo. Tócalo otra vez para
+recuperar la interfaz normal. Desde allí puedes elegir otro modo.
+No hay selector intermedio ni pantalla de carga. La elección se recuerda.
+Los tres modos ocultan título, brújula, reloj, línea de tiempo, mochila,
+catálogo, telescopio, constructor, opciones e indicador FPS.
+En ordenador se conservan los controles habituales de movimiento por teclado;
+los botones táctiles siguen apareciendo en los dispositivos táctiles.
+
+JOYSTICK
+Se añaden liberaciones al terminar/cancelar el contacto fuera del joystick,
+perder la captura, llegar al borde de pantalla o cambiar la orientación.
+También se comprueba el final del contacto táctil como respaldo en Safari.
+Cada dedo se identifica por separado: soltar el dedo que mira no cancela
+el dedo que camina. No hay temporizadores ni comprobaciones nuevas por frame.
+
+ALCANCE
+Se reutilizan los mismos botones y funciones. No se cambian shaders, luces,
+sombras, terreno, pasto, resolución, perfiles gráficos, modelos ni física.
+La preferencia viewMode se añade a la clave de preferencias ya existente.
+No cambian claves ni formatos de inventario, construcciones o expediciones.
+No se borra ningún dato del jugador.
+
+ARCHIVOS DEL ZIP (8 archivos completos, sueltos)
+Reemplazar:
+  app.js
+  controls.js
+  expedition.js
+  index.html
+  renderer-factory.js
+  styles.css
+  service-worker.js
+Añadir:
+  CAMBIOS-MODOS-VISTA.txt
+
+renderer-factory.js solo cambia el identificador de versión del diagnóstico.
+El Service Worker se genera con todos los recursos completos y sus nuevos
+hashes SHA-256. Conserva el sistema de versiones por ventana y la aceptación
+de actualizaciones. Los sufijos de imports existentes se conservan: la versión
+offline se identifica por el hash del contenido completo de la publicación.
+
+INSTALAR DESDE IPHONE
+1. Guarda el ZIP en Archivos y tócalo para descomprimir.
+2. Conserva tu copia anterior. Puedes mover estos reemplazos a tu carpeta
+   original con tu método habitual, y añadir el TXT nuevo.
+3. En GitHub → IzayTO/Sky-Explorer-App → main → Add file → Upload files,
+   selecciona los ocho archivos sueltos. Confírmalos juntos con Commit changes.
+   No subas el ZIP ni elimines los archivos que no están en esta entrega.
+4. Espera que GitHub Pages termine de publicar. Abre el icono instalado con
+   Internet, vuelve a destinos y acepta Actualización lista → Guardar y recargar.
+5. Espera Disponible sin conexión. No necesitas reinstalar ni borrar datos.
+6. Mantén presionado el título para ver 4.1.3-modos-vista en el diagnóstico.
+   Si todavía aparece la anterior, usa Buscar actualización desde ese panel.
+7. Configuración → Exploración → Modo de vista · Ojo → elige uno. Cierra
+   Opciones y toca el ojo. Para cambiarlo, vuelve con el ojo y abre Opciones.
+
+VERIFICACIÓN
+Pruebas locales de inicio en Tierra/Luna, controles de vista y preferencias,
+liberación del joystick/multitouch, sillas, vehículos y regreso a herramientas.
+Regresiones locales de construcción, inventario, telescopio e instrumentos.
+Sintaxis, imports, rutas y recursos offline con hashes verificados.
+La cancelación de gestos del sistema en un iPhone físico requiere comprobarse
+en el dispositivo. No se hicieron mediciones físicas de FPS ni temperatura.
